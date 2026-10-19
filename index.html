@@ -1188,18 +1188,24 @@
           });
         }
       }
+      let previousCapitalGainsBracketCeiling = 0;
       for (const capitalGainsBracket of capitalGainsBrackets) {
-        if (capitalGainsBracket.maximumTaxableIncome !== null) {
-          bracketCeilingBubbles.push({
-            bubbleKey: "capitalGains-" + capitalGainsBracket.marginalRate,
-            bubbleLabel: percentFormatter.format(capitalGainsBracket.marginalRate),
-            bracketCeiling: capitalGainsBracket.maximumTaxableIncome,
-            taxKindName: "capitalGains"
-          });
+        const capitalGainsBracketIsUnbounded = capitalGainsBracket.maximumTaxableIncome === null;
+        bracketCeilingBubbles.push({
+          bubbleKey: "capitalGains-" + capitalGainsBracket.marginalRate,
+          bubbleLabel: percentFormatter.format(capitalGainsBracket.marginalRate),
+          bracketCeiling: capitalGainsBracketIsUnbounded ? previousCapitalGainsBracketCeiling : capitalGainsBracket.maximumTaxableIncome,
+          taxKindName: "capitalGains",
+          fillsThroughTopOfBar: capitalGainsBracketIsUnbounded
+        });
+        if (!capitalGainsBracketIsUnbounded) {
+          previousCapitalGainsBracketCeiling = capitalGainsBracket.maximumTaxableIncome;
         }
       }
       bracketCeilingBubbles.sort(function (leftBubble, rightBubble) {
-        return leftBubble.bracketCeiling - rightBubble.bracketCeiling;
+        const leftSortValue = leftBubble.fillsThroughTopOfBar ? Number.POSITIVE_INFINITY : leftBubble.bracketCeiling;
+        const rightSortValue = rightBubble.fillsThroughTopOfBar ? Number.POSITIVE_INFINITY : rightBubble.bracketCeiling;
+        return leftSortValue - rightSortValue;
       });
       return selectorBubbles.concat(bracketCeilingBubbles);
     }
@@ -1218,6 +1224,9 @@
     function selectorBubbleAmountForBar(selectorBubble, barMaximumAmount, selectorKindName) {
       if (selectorBubble.bubbleKey === remainingYearsEvenSplitBubbleKey) {
         return clampInteger(Math.round(barMaximumAmount / remainingYearCountIncludingCurrentYear()), 0, barMaximumAmount);
+      }
+      if (selectorBubble.fillsThroughTopOfBar) {
+        return barMaximumAmount;
       }
       return clampInteger(unclampedSelectorBubbleTargetAmount(selectorBubble, selectorKindName), 0, barMaximumAmount);
     }
@@ -1262,7 +1271,7 @@
       selectorBubbleRow.replaceChildren();
       const selectorBubblesAreLocked = currentGameState.phaseName !== "playing" || isFinalYear();
       for (const selectorBubble of collectSelectorBubbles()) {
-        if (selectorBubble.bracketCeiling !== null) {
+        if (selectorBubble.taxKindName !== "capitalGains" && selectorBubble.bracketCeiling !== null) {
           const selectorBubbleTargetAmount = unclampedSelectorBubbleTargetAmount(selectorBubble, selectorKindName);
           if (selectorBubbleTargetAmount <= 0 || selectorBubbleTargetAmount > barMaximumAmount) {
             continue;

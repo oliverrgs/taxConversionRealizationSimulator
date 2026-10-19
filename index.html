@@ -1189,7 +1189,8 @@
         averageRateBubbles.push({
           bubbleKey: "capitalGains-" + capitalGainsBracket.marginalRate,
           bubbleLabel: percentFormatter.format(capitalGainsBracket.marginalRate),
-          targetAverageTaxRate: capitalGainsBracket.marginalRate
+          targetAverageTaxRate: capitalGainsBracket.marginalRate,
+          fillsZeroPercentCapitalGainsBracket: capitalGainsBracket.marginalRate === 0
         });
       }
       averageRateBubbles.sort(function (leftBubble, rightBubble) {
@@ -1242,9 +1243,43 @@
       return highestPassingAmount;
     }
 
+    function otherSliderAmountForSelectorKind(selectorKindName) {
+      if (selectorKindName === "capitalGains") {
+        return clampInteger(currentGameState.individualRetirementAccountConversionThisYear, 0, currentGameState.individualRetirementAccountBalance);
+      }
+      return clampInteger(currentGameState.capitalGainsToRealizeThisYear, 0, currentGameState.unrealizedGainsAmount);
+    }
+
+    function maximumTaxableIncomeAtZeroPercentCapitalGains() {
+      const capitalGainsBrackets = loadedTaxBracketTables.longTermCapitalGainsBracketsByFilingStatus[currentGameState.selectedFilingStatus];
+      for (const capitalGainsBracket of capitalGainsBrackets) {
+        if (capitalGainsBracket.marginalRate === 0) {
+          return capitalGainsBracket.maximumTaxableIncome;
+        }
+      }
+      return 0;
+    }
+
+    function sliderAmountToFillZeroPercentCapitalGainsBracket(barMaximumAmount, selectorKindName) {
+      const zeroPercentCapitalGainsMaximumTaxableIncome = maximumTaxableIncomeAtZeroPercentCapitalGains();
+      if (!zeroPercentCapitalGainsMaximumTaxableIncome) {
+        return 0;
+      }
+      return clampInteger(
+        zeroPercentCapitalGainsMaximumTaxableIncome
+          + standardDeductionAmountForFilingStatus(currentGameState.selectedFilingStatus)
+          - otherSliderAmountForSelectorKind(selectorKindName),
+        0,
+        barMaximumAmount
+      );
+    }
+
     function selectorBubbleAmountForBar(selectorBubble, barMaximumAmount, selectorKindName) {
       if (selectorBubble.bubbleKey === remainingYearsEvenSplitBubbleKey) {
         return clampInteger(Math.round(barMaximumAmount / remainingYearCountIncludingCurrentYear()), 0, barMaximumAmount);
+      }
+      if (selectorBubble.fillsZeroPercentCapitalGainsBracket) {
+        return sliderAmountToFillZeroPercentCapitalGainsBracket(barMaximumAmount, selectorKindName);
       }
       return sliderAmountForTargetAverageTaxRate(selectorKindName, selectorBubble.targetAverageTaxRate, barMaximumAmount);
     }

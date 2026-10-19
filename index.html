@@ -378,6 +378,11 @@
       font-weight: 500;
     }
 
+    tr.currentSetupBestStrategyRow td {
+      background: #2a2814;
+      color: var(--goldScore);
+    }
+
     .errorBanner {
       color: #ffd2c8;
       background: #3b1d18;
@@ -1731,8 +1736,12 @@
       const sortedBestStrategyRecords = bestStrategyRecords.slice().sort(function (leftRecord, rightRecord) {
         return strategyEndingWealthAmount(rightRecord) - strategyEndingWealthAmount(leftRecord);
       });
+      const currentSetupKey = bestStrategySetupKey(currentGameState);
       for (const bestStrategyRecord of sortedBestStrategyRecords) {
         const tableRow = document.createElement("tr");
+        if (bestStrategySetupKey(bestStrategyRecord) === currentSetupKey) {
+          tableRow.classList.add("currentSetupBestStrategyRow");
+        }
         const cellValues = [
           formatTaxAmount(strategyEndingWealthAmount(bestStrategyRecord)),
           bestStrategyRecord.selectedStartingAccountScenarioName,

@@ -1185,12 +1185,20 @@
           targetAverageTaxRate: ordinaryIncomeBracket.marginalRate
         });
       }
+      let previousCapitalGainsBracketCeiling = 0;
       for (const capitalGainsBracket of capitalGainsBrackets) {
+        const capitalGainsBracketIsUnbounded = capitalGainsBracket.maximumTaxableIncome === null;
         averageRateBubbles.push({
           bubbleKey: "capitalGains-" + capitalGainsBracket.marginalRate,
           bubbleLabel: percentFormatter.format(capitalGainsBracket.marginalRate),
-          targetAverageTaxRate: capitalGainsBracket.marginalRate
+          targetAverageTaxRate: capitalGainsBracket.marginalRate,
+          taxKindName: "capitalGains",
+          bracketCeiling: capitalGainsBracketIsUnbounded ? previousCapitalGainsBracketCeiling : capitalGainsBracket.maximumTaxableIncome,
+          fillsThroughTopOfBar: capitalGainsBracketIsUnbounded
         });
+        if (!capitalGainsBracketIsUnbounded) {
+          previousCapitalGainsBracketCeiling = capitalGainsBracket.maximumTaxableIncome;
+        }
       }
       averageRateBubbles.sort(function (leftBubble, rightBubble) {
         return leftBubble.targetAverageTaxRate - rightBubble.targetAverageTaxRate;
@@ -1233,9 +1241,28 @@
       return highestPassingAmount;
     }
 
+    function otherSliderAmountForSelectorKind(selectorKindName) {
+      if (selectorKindName === "capitalGains") {
+        return currentGameState.individualRetirementAccountConversionThisYear;
+      }
+      return currentGameState.capitalGainsToRealizeThisYear;
+    }
+
     function selectorBubbleAmountForBar(selectorBubble, barMaximumAmount, selectorKindName) {
       if (selectorBubble.bubbleKey === remainingYearsEvenSplitBubbleKey) {
         return clampInteger(Math.round(barMaximumAmount / remainingYearCountIncludingCurrentYear()), 0, barMaximumAmount);
+      }
+      if (selectorBubble.taxKindName === "capitalGains") {
+        if (selectorBubble.fillsThroughTopOfBar) {
+          return barMaximumAmount;
+        }
+        return clampInteger(
+          selectorBubble.bracketCeiling
+            + standardDeductionAmountForFilingStatus(currentGameState.selectedFilingStatus)
+            - otherSliderAmountForSelectorKind(selectorKindName),
+          0,
+          barMaximumAmount
+        );
       }
       return sliderAmountForTargetAverageTaxRate(selectorKindName, selectorBubble.targetAverageTaxRate, barMaximumAmount);
     }

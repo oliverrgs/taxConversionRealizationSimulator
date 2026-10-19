@@ -1170,65 +1170,74 @@
       const selectorBubbles = [{
         bubbleKey: remainingYearsEvenSplitBubbleKey,
         bubbleLabel: "÷" + remainingYearCountIncludingCurrentYear(),
-        bracketCeiling: null
+        targetAverageTaxRate: null
       }];
       if (!loadedTaxBracketTables) {
         return selectorBubbles;
       }
       const ordinaryIncomeBrackets = loadedTaxBracketTables.ordinaryIncomeBracketsByFilingStatus[currentGameState.selectedFilingStatus];
       const capitalGainsBrackets = loadedTaxBracketTables.longTermCapitalGainsBracketsByFilingStatus[currentGameState.selectedFilingStatus];
-      const bracketCeilingBubbles = [];
+      const averageRateBubbles = [];
       for (const ordinaryIncomeBracket of ordinaryIncomeBrackets) {
-        if (ordinaryIncomeBracket.maximumTaxableIncome !== null) {
-          bracketCeilingBubbles.push({
-            bubbleKey: "ordinary-" + ordinaryIncomeBracket.marginalRate,
-            bubbleLabel: percentFormatter.format(ordinaryIncomeBracket.marginalRate),
-            bracketCeiling: ordinaryIncomeBracket.maximumTaxableIncome,
-            taxKindName: "ordinary"
-          });
-        }
+        averageRateBubbles.push({
+          bubbleKey: "ordinary-" + ordinaryIncomeBracket.marginalRate,
+          bubbleLabel: percentFormatter.format(ordinaryIncomeBracket.marginalRate),
+          targetAverageTaxRate: ordinaryIncomeBracket.marginalRate
+        });
       }
-      let previousCapitalGainsBracketCeiling = 0;
       for (const capitalGainsBracket of capitalGainsBrackets) {
-        const capitalGainsBracketIsUnbounded = capitalGainsBracket.maximumTaxableIncome === null;
-        bracketCeilingBubbles.push({
+        averageRateBubbles.push({
           bubbleKey: "capitalGains-" + capitalGainsBracket.marginalRate,
           bubbleLabel: percentFormatter.format(capitalGainsBracket.marginalRate),
-          bracketCeiling: capitalGainsBracketIsUnbounded ? previousCapitalGainsBracketCeiling : capitalGainsBracket.maximumTaxableIncome,
-          taxKindName: "capitalGains",
-          fillsThroughTopOfBar: capitalGainsBracketIsUnbounded
+          targetAverageTaxRate: capitalGainsBracket.marginalRate
         });
-        if (!capitalGainsBracketIsUnbounded) {
-          previousCapitalGainsBracketCeiling = capitalGainsBracket.maximumTaxableIncome;
-        }
       }
-      bracketCeilingBubbles.sort(function (leftBubble, rightBubble) {
-        const leftSortValue = leftBubble.fillsThroughTopOfBar ? Number.POSITIVE_INFINITY : leftBubble.bracketCeiling;
-        const rightSortValue = rightBubble.fillsThroughTopOfBar ? Number.POSITIVE_INFINITY : rightBubble.bracketCeiling;
-        return leftSortValue - rightSortValue;
+      averageRateBubbles.sort(function (leftBubble, rightBubble) {
+        return leftBubble.targetAverageTaxRate - rightBubble.targetAverageTaxRate;
       });
-      return selectorBubbles.concat(bracketCeilingBubbles);
+      return selectorBubbles.concat(averageRateBubbles);
     }
 
-    function unclampedSelectorBubbleTargetAmount(selectorBubble, selectorKindName) {
-      const standardDeductionAmount = standardDeductionAmountForFilingStatus(currentGameState.selectedFilingStatus);
-      if (selectorKindName === "capitalGains") {
-        return selectorBubble.bracketCeiling + standardDeductionAmount - currentGameState.individualRetirementAccountConversionThisYear;
+    function combinedTaxRateForSliderAmount(selectorKindName, thisSliderAmount) {
+      const conversionAmount = selectorKindName === "conversion"
+        ? thisSliderAmount
+        : currentGameState.individualRetirementAccountConversionThisYear;
+      const capitalGainsAmount = selectorKindName === "capitalGains"
+        ? thisSliderAmount
+        : currentGameState.capitalGainsToRealizeThisYear;
+      const yearTaxes = calculateYearTaxes(
+        conversionAmount,
+        capitalGainsAmount,
+        currentGameState.selectedFilingStatus
+      );
+      return combinedTaxRate(yearTaxes.totalTax, capitalGainsAmount, conversionAmount);
+    }
+
+    function sliderAmountForTargetAverageTaxRate(selectorKindName, targetAverageTaxRate, barMaximumAmount) {
+      if (!loadedTaxBracketTables || barMaximumAmount <= 0) {
+        return 0;
       }
-      if (selectorBubble.taxKindName === "capitalGains") {
-        return selectorBubble.bracketCeiling + standardDeductionAmount - currentGameState.capitalGainsToRealizeThisYear;
+      if (combinedTaxRateForSliderAmount(selectorKindName, barMaximumAmount) <= targetAverageTaxRate) {
+        return barMaximumAmount;
       }
-      return selectorBubble.bracketCeiling + standardDeductionAmount;
+      let highestPassingAmount = 0;
+      let lowestFailingAmount = barMaximumAmount;
+      while (highestPassingAmount + 1 < lowestFailingAmount) {
+        const midpointAmount = Math.floor((highestPassingAmount + lowestFailingAmount) / 2);
+        if (combinedTaxRateForSliderAmount(selectorKindName, midpointAmount) <= targetAverageTaxRate) {
+          highestPassingAmount = midpointAmount;
+        } else {
+          lowestFailingAmount = midpointAmount;
+        }
+      }
+      return highestPassingAmount;
     }
 
     function selectorBubbleAmountForBar(selectorBubble, barMaximumAmount, selectorKindName) {
       if (selectorBubble.bubbleKey === remainingYearsEvenSplitBubbleKey) {
         return clampInteger(Math.round(barMaximumAmount / remainingYearCountIncludingCurrentYear()), 0, barMaximumAmount);
       }
-      if (selectorBubble.fillsThroughTopOfBar) {
-        return barMaximumAmount;
-      }
-      return clampInteger(unclampedSelectorBubbleTargetAmount(selectorBubble, selectorKindName), 0, barMaximumAmount);
+      return sliderAmountForTargetAverageTaxRate(selectorKindName, selectorBubble.targetAverageTaxRate, barMaximumAmount);
     }
 
     function findSelectorBubbleByKey(bubbleKey) {
@@ -1241,29 +1250,35 @@
       return null;
     }
 
+    function applyOneSelectorBubbleToItsSlider(bubbleKey, selectorKindName) {
+      const selectorBubble = findSelectorBubbleByKey(bubbleKey);
+      if (!selectorBubble) {
+        return;
+      }
+      if (selectorKindName === "capitalGains") {
+        currentGameState.capitalGainsToRealizeThisYear = selectorBubbleAmountForBar(
+          selectorBubble,
+          currentGameState.unrealizedGainsAmount,
+          "capitalGains"
+        );
+      } else {
+        currentGameState.individualRetirementAccountConversionThisYear = selectorBubbleAmountForBar(
+          selectorBubble,
+          currentGameState.individualRetirementAccountBalance,
+          "conversion"
+        );
+      }
+    }
+
     function applySelectedSelectorBubbles() {
       if (currentGameState.phaseName !== "playing" || isFinalYear()) {
         return;
       }
       if (currentGameState.selectedConversionSelectorBubbleKey) {
-        const selectedConversionSelectorBubble = findSelectorBubbleByKey(currentGameState.selectedConversionSelectorBubbleKey);
-        if (selectedConversionSelectorBubble) {
-          currentGameState.individualRetirementAccountConversionThisYear = selectorBubbleAmountForBar(
-            selectedConversionSelectorBubble,
-            currentGameState.individualRetirementAccountBalance,
-            "conversion"
-          );
-        }
+        applyOneSelectorBubbleToItsSlider(currentGameState.selectedConversionSelectorBubbleKey, "conversion");
       }
       if (currentGameState.selectedCapitalGainsSelectorBubbleKey) {
-        const selectedCapitalGainsSelectorBubble = findSelectorBubbleByKey(currentGameState.selectedCapitalGainsSelectorBubbleKey);
-        if (selectedCapitalGainsSelectorBubble) {
-          currentGameState.capitalGainsToRealizeThisYear = selectorBubbleAmountForBar(
-            selectedCapitalGainsSelectorBubble,
-            currentGameState.unrealizedGainsAmount,
-            "capitalGains"
-          );
-        }
+        applyOneSelectorBubbleToItsSlider(currentGameState.selectedCapitalGainsSelectorBubbleKey, "capitalGains");
       }
     }
 
@@ -1271,12 +1286,6 @@
       selectorBubbleRow.replaceChildren();
       const selectorBubblesAreLocked = currentGameState.phaseName !== "playing" || isFinalYear();
       for (const selectorBubble of collectSelectorBubbles()) {
-        if (selectorBubble.taxKindName !== "capitalGains" && selectorBubble.bracketCeiling !== null) {
-          const selectorBubbleTargetAmount = unclampedSelectorBubbleTargetAmount(selectorBubble, selectorKindName);
-          if (selectorBubbleTargetAmount <= 0 || selectorBubbleTargetAmount > barMaximumAmount) {
-            continue;
-          }
-        }
         const selectorBubbleButton = document.createElement("button");
         selectorBubbleButton.type = "button";
         selectorBubbleButton.className = "selectorBubble";
@@ -1625,7 +1634,7 @@
       } else {
         currentGameState.selectedConversionSelectorBubbleKey = bubbleKey;
       }
-      applySelectedSelectorBubbles();
+      applyOneSelectorBubbleToItsSlider(bubbleKey, selectorKindName);
       renderCurrentGame();
     }
 

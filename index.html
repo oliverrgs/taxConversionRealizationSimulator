@@ -663,6 +663,7 @@
     const capitalGainsSelectorBubbleRow = document.getElementById("capitalGainsSelectorBubbleRow");
     const individualRetirementAccountConversionSelectorBubbleRow = document.getElementById("individualRetirementAccountConversionSelectorBubbleRow");
     const remainingYearsEvenSplitBubbleKey = "remainingYearsEvenSplit";
+    const yearSplitDivisorAmounts = [4, 3, 2];
     const startRoundButton = document.getElementById("startRoundButton");
     const closeYearButton = document.getElementById("closeYearButton");
     const loadErrorBanner = document.getElementById("loadErrorBanner");
@@ -1166,12 +1167,24 @@
       return Math.max(1, currentGameState.totalYearCount - currentGameState.currentYearNumber + 1);
     }
 
+    function yearSplitSelectorBubbleKey(yearSplitDivisorAmount) {
+      return "yearSplit-" + yearSplitDivisorAmount;
+    }
+
     function collectSelectorBubbles() {
       const selectorBubbles = [{
         bubbleKey: remainingYearsEvenSplitBubbleKey,
         bubbleLabel: "÷" + remainingYearCountIncludingCurrentYear(),
         targetAverageTaxRate: null
       }];
+      for (const yearSplitDivisorAmount of yearSplitDivisorAmounts) {
+        selectorBubbles.push({
+          bubbleKey: yearSplitSelectorBubbleKey(yearSplitDivisorAmount),
+          bubbleLabel: "%" + yearSplitDivisorAmount,
+          targetAverageTaxRate: null,
+          yearSplitDivisorAmount: yearSplitDivisorAmount
+        });
+      }
       if (!loadedTaxBracketTables) {
         return selectorBubbles;
       }
@@ -1278,6 +1291,9 @@
       if (selectorBubble.bubbleKey === remainingYearsEvenSplitBubbleKey) {
         return clampInteger(Math.round(barMaximumAmount / remainingYearCountIncludingCurrentYear()), 0, barMaximumAmount);
       }
+      if (selectorBubble.yearSplitDivisorAmount) {
+        return clampInteger(Math.round(barMaximumAmount / selectorBubble.yearSplitDivisorAmount), 0, barMaximumAmount);
+      }
       if (selectorBubble.fillsZeroPercentCapitalGainsBracket) {
         return sliderAmountToFillZeroPercentCapitalGainsBracket(barMaximumAmount, selectorKindName);
       }
@@ -1324,6 +1340,27 @@
       if (currentGameState.selectedCapitalGainsSelectorBubbleKey) {
         applyOneSelectorBubbleToItsSlider(currentGameState.selectedCapitalGainsSelectorBubbleKey, "capitalGains");
       }
+    }
+
+    function nextYearSplitSelectorBubbleKeyAfterYearClose(selectedBubbleKey) {
+      for (let yearSplitDivisorIndex = 0; yearSplitDivisorIndex < yearSplitDivisorAmounts.length; yearSplitDivisorIndex += 1) {
+        if (selectedBubbleKey === yearSplitSelectorBubbleKey(yearSplitDivisorAmounts[yearSplitDivisorIndex])) {
+          if (yearSplitDivisorIndex + 1 >= yearSplitDivisorAmounts.length) {
+            return null;
+          }
+          return yearSplitSelectorBubbleKey(yearSplitDivisorAmounts[yearSplitDivisorIndex + 1]);
+        }
+      }
+      return selectedBubbleKey;
+    }
+
+    function advanceYearSplitSelectorBubblesAfterYearClose() {
+      currentGameState.selectedCapitalGainsSelectorBubbleKey = nextYearSplitSelectorBubbleKeyAfterYearClose(
+        currentGameState.selectedCapitalGainsSelectorBubbleKey
+      );
+      currentGameState.selectedConversionSelectorBubbleKey = nextYearSplitSelectorBubbleKeyAfterYearClose(
+        currentGameState.selectedConversionSelectorBubbleKey
+      );
     }
 
     function renderSelectorBubbleRow(selectorBubbleRow, selectedBubbleKey, barMaximumAmount, selectorKindName) {
@@ -1406,6 +1443,7 @@
         recordBestStrategyIfImproved();
       } else {
         currentGameState.currentYearNumber += 1;
+        advanceYearSplitSelectorBubblesAfterYearClose();
         applySelectedSelectorBubbles();
         if (isFinalYear()) {
           currentGameState.capitalGainsToRealizeThisYear = currentGameState.unrealizedGainsAmount;

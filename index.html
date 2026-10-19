@@ -249,7 +249,7 @@
 
     .sliderWithTax {
       display: grid;
-      grid-template-columns: 1fr 13rem;
+      grid-template-columns: 1fr 16rem;
       gap: 0.85rem;
       align-items: center;
     }
@@ -257,6 +257,37 @@
     .taxBarColumn {
       display: grid;
       gap: 0.35rem;
+    }
+
+    .taxBarTrackRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    button.blendedTaxRateDisplay {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #f0b2a8;
+      font-family: "Cascadia Mono", "Consolas", monospace;
+      font-size: 0.9rem;
+      min-width: 3.6rem;
+      text-align: right;
+      cursor: pointer;
+    }
+
+    button.blendedTaxRateDisplay:disabled {
+      cursor: default;
+    }
+
+    input.blendedTaxRateInput {
+      width: 3.8rem;
+      padding: 0.15rem 0.3rem;
+      text-align: right;
+      font-family: "Cascadia Mono", "Consolas", monospace;
+      font-size: 0.85rem;
     }
 
     .taxBarTrack {
@@ -472,8 +503,12 @@
               </div>
             </div>
             <div class="taxBarColumn">
-              <div class="taxBarTrack">
-                <div id="capitalGainsTaxBarFill" class="taxBarFill"></div>
+              <div class="taxBarTrackRow">
+                <div class="taxBarTrack">
+                  <div id="capitalGainsTaxBarFill" class="taxBarFill"></div>
+                </div>
+                <button id="capitalGainsBlendedTaxRateDisplay" class="blendedTaxRateDisplay" type="button">0%</button>
+                <input id="capitalGainsBlendedTaxRateInput" class="blendedTaxRateInput hidden" type="text" inputmode="decimal">
               </div>
               <div class="taxBarReadout">
                 <span id="capitalGainsNextDollarRateLabel" class="nextDollarRate">0%</span>
@@ -495,8 +530,12 @@
               </div>
             </div>
             <div class="taxBarColumn">
-              <div class="taxBarTrack">
-                <div id="individualRetirementAccountConversionTaxBarFill" class="taxBarFill"></div>
+              <div class="taxBarTrackRow">
+                <div class="taxBarTrack">
+                  <div id="individualRetirementAccountConversionTaxBarFill" class="taxBarFill"></div>
+                </div>
+                <button id="individualRetirementAccountConversionBlendedTaxRateDisplay" class="blendedTaxRateDisplay" type="button">0%</button>
+                <input id="individualRetirementAccountConversionBlendedTaxRateInput" class="blendedTaxRateInput hidden" type="text" inputmode="decimal">
               </div>
               <div class="taxBarReadout">
                 <span id="individualRetirementAccountConversionNextDollarRateLabel" class="nextDollarRate">0%</span>
@@ -672,6 +711,11 @@
     const individualRetirementAccountConversionSlider = document.getElementById("individualRetirementAccountConversionSlider");
     const capitalGainsSelectorBubbleRow = document.getElementById("capitalGainsSelectorBubbleRow");
     const individualRetirementAccountConversionSelectorBubbleRow = document.getElementById("individualRetirementAccountConversionSelectorBubbleRow");
+    const capitalGainsBlendedTaxRateDisplay = document.getElementById("capitalGainsBlendedTaxRateDisplay");
+    const capitalGainsBlendedTaxRateInput = document.getElementById("capitalGainsBlendedTaxRateInput");
+    const individualRetirementAccountConversionBlendedTaxRateDisplay = document.getElementById("individualRetirementAccountConversionBlendedTaxRateDisplay");
+    const individualRetirementAccountConversionBlendedTaxRateInput = document.getElementById("individualRetirementAccountConversionBlendedTaxRateInput");
+    let blendedTaxRateEditorSelectorKindName = null;
     const remainingYearsEvenSplitBubbleKey = "remainingYearsEvenSplit";
     const yearSplitDivisorAmounts = [4, 3, 2];
     const startRoundButton = document.getElementById("startRoundButton");
@@ -1563,6 +1607,10 @@
       document.getElementById("individualRetirementAccountConversionNextDollarRateLabel").textContent = "→ " + percentFormatter.format(nextDollarConversionTax);
       document.getElementById("capitalGainsTaxBarFill").style.width = taxBarFillPercent(yearTaxes.longTermCapitalGainsTax, yearActions.capitalGainsToRealize) + "%";
       document.getElementById("individualRetirementAccountConversionTaxBarFill").style.width = taxBarFillPercent(yearTaxes.ordinaryIncomeTax, yearActions.individualRetirementAccountConversion) + "%";
+      const capitalGainsBlendedTaxRate = yearActions.capitalGainsToRealize <= 0 ? 0 : yearTaxes.longTermCapitalGainsTax / yearActions.capitalGainsToRealize;
+      const conversionBlendedTaxRate = yearActions.individualRetirementAccountConversion <= 0 ? 0 : yearTaxes.ordinaryIncomeTax / yearActions.individualRetirementAccountConversion;
+      renderBlendedTaxRateEditor("capitalGains", capitalGainsBlendedTaxRate);
+      renderBlendedTaxRateEditor("conversion", conversionBlendedTaxRate);
       renderBracketSnapLabels(yearActions);
     }
 
@@ -1615,6 +1663,8 @@
       const actionInputsAreLocked = currentGameState.phaseName !== "playing" || isFinalYear();
       capitalGainsToRealizeSlider.disabled = actionInputsAreLocked;
       individualRetirementAccountConversionSlider.disabled = actionInputsAreLocked;
+      capitalGainsBlendedTaxRateDisplay.disabled = actionInputsAreLocked;
+      individualRetirementAccountConversionBlendedTaxRateDisplay.disabled = actionInputsAreLocked;
       startRoundButton.disabled = !loadedTaxBracketTables;
       closeYearButton.disabled = !loadedTaxBracketTables || currentGameState.phaseName !== "playing";
       closeYearButton.textContent = currentGameState.phaseName === "playing" && isFinalYear()
@@ -1722,6 +1772,88 @@
       renderCurrentGame();
     }
 
+    function blendedTaxRateEditorElementsForSelectorKind(selectorKindName) {
+      if (selectorKindName === "capitalGains") {
+        return {
+          blendedTaxRateDisplay: capitalGainsBlendedTaxRateDisplay,
+          blendedTaxRateInput: capitalGainsBlendedTaxRateInput
+        };
+      }
+      return {
+        blendedTaxRateDisplay: individualRetirementAccountConversionBlendedTaxRateDisplay,
+        blendedTaxRateInput: individualRetirementAccountConversionBlendedTaxRateInput
+      };
+    }
+
+    function renderBlendedTaxRateEditor(selectorKindName, blendedTaxRate) {
+      const blendedTaxRateEditorElements = blendedTaxRateEditorElementsForSelectorKind(selectorKindName);
+      if (blendedTaxRateEditorSelectorKindName === selectorKindName) {
+        return;
+      }
+      blendedTaxRateEditorElements.blendedTaxRateDisplay.textContent = percentFormatter.format(blendedTaxRate);
+      blendedTaxRateEditorElements.blendedTaxRateDisplay.classList.remove("hidden");
+      blendedTaxRateEditorElements.blendedTaxRateInput.classList.add("hidden");
+    }
+
+    function parseTypedBlendedTaxRateText(typedBlendedTaxRateText) {
+      const trimmedTypedBlendedTaxRateText = String(typedBlendedTaxRateText).trim().replace(/%/g, "");
+      if (trimmedTypedBlendedTaxRateText === "") {
+        return null;
+      }
+      const typedBlendedTaxRatePercentagePoints = Number(trimmedTypedBlendedTaxRateText);
+      if (!Number.isFinite(typedBlendedTaxRatePercentagePoints)) {
+        return null;
+      }
+      return Math.min(1, Math.max(0, typedBlendedTaxRatePercentagePoints / 100));
+    }
+
+    function beginBlendedTaxRateEditing(selectorKindName) {
+      if (currentGameState.phaseName !== "playing" || isFinalYear() || !loadedTaxBracketTables) {
+        return;
+      }
+      blendedTaxRateEditorSelectorKindName = selectorKindName;
+      const blendedTaxRateEditorElements = blendedTaxRateEditorElementsForSelectorKind(selectorKindName);
+      const currentBlendedTaxRate = averageTaxRateForThisSliderAmount(
+        selectorKindName,
+        selectorKindName === "capitalGains"
+          ? currentGameState.capitalGainsToRealizeThisYear
+          : currentGameState.individualRetirementAccountConversionThisYear
+      );
+      blendedTaxRateEditorElements.blendedTaxRateInput.value = (currentBlendedTaxRate * 100).toFixed(1);
+      blendedTaxRateEditorElements.blendedTaxRateDisplay.classList.add("hidden");
+      blendedTaxRateEditorElements.blendedTaxRateInput.classList.remove("hidden");
+      blendedTaxRateEditorElements.blendedTaxRateInput.focus();
+      blendedTaxRateEditorElements.blendedTaxRateInput.select();
+    }
+
+    function cancelBlendedTaxRateEditing() {
+      blendedTaxRateEditorSelectorKindName = null;
+      renderCurrentGame();
+    }
+
+    function commitBlendedTaxRateEditing(selectorKindName) {
+      const blendedTaxRateEditorElements = blendedTaxRateEditorElementsForSelectorKind(selectorKindName);
+      const targetAverageTaxRate = parseTypedBlendedTaxRateText(blendedTaxRateEditorElements.blendedTaxRateInput.value);
+      blendedTaxRateEditorSelectorKindName = null;
+      if (targetAverageTaxRate === null) {
+        renderCurrentGame();
+        return;
+      }
+      const barMaximumAmount = selectorKindName === "capitalGains"
+        ? currentGameState.unrealizedGainsAmount
+        : currentGameState.individualRetirementAccountBalance;
+      const sliderAmountForTypedBlendedTaxRate = sliderAmountForTargetAverageTaxRate(
+        selectorKindName,
+        targetAverageTaxRate,
+        barMaximumAmount
+      );
+      if (selectorKindName === "capitalGains") {
+        assignCapitalGainsToRealize(sliderAmountForTypedBlendedTaxRate);
+      } else {
+        assignIndividualRetirementAccountConversion(sliderAmountForTypedBlendedTaxRate);
+      }
+    }
+
     function assignIndividualRetirementAccountConversion(requestedAmount) {
       currentGameState.individualRetirementAccountConversionThisYear = clampInteger(requestedAmount, 0, currentGameState.individualRetirementAccountBalance);
       const selectedConversionSelectorBubble = findSelectorBubbleByKey(currentGameState.selectedConversionSelectorBubbleKey);
@@ -1786,6 +1918,40 @@
     });
     individualRetirementAccountConversionSlider.addEventListener("input", function () {
       assignIndividualRetirementAccountConversion(Number(individualRetirementAccountConversionSlider.value));
+    });
+    capitalGainsBlendedTaxRateDisplay.addEventListener("click", function () {
+      beginBlendedTaxRateEditing("capitalGains");
+    });
+    individualRetirementAccountConversionBlendedTaxRateDisplay.addEventListener("click", function () {
+      beginBlendedTaxRateEditing("conversion");
+    });
+    capitalGainsBlendedTaxRateInput.addEventListener("keydown", function (keyEvent) {
+      if (keyEvent.key === "Enter") {
+        keyEvent.preventDefault();
+        commitBlendedTaxRateEditing("capitalGains");
+      } else if (keyEvent.key === "Escape") {
+        keyEvent.preventDefault();
+        cancelBlendedTaxRateEditing();
+      }
+    });
+    individualRetirementAccountConversionBlendedTaxRateInput.addEventListener("keydown", function (keyEvent) {
+      if (keyEvent.key === "Enter") {
+        keyEvent.preventDefault();
+        commitBlendedTaxRateEditing("conversion");
+      } else if (keyEvent.key === "Escape") {
+        keyEvent.preventDefault();
+        cancelBlendedTaxRateEditing();
+      }
+    });
+    capitalGainsBlendedTaxRateInput.addEventListener("blur", function () {
+      if (blendedTaxRateEditorSelectorKindName === "capitalGains") {
+        commitBlendedTaxRateEditing("capitalGains");
+      }
+    });
+    individualRetirementAccountConversionBlendedTaxRateInput.addEventListener("blur", function () {
+      if (blendedTaxRateEditorSelectorKindName === "conversion") {
+        commitBlendedTaxRateEditing("conversion");
+      }
     });
     startRoundButton.addEventListener("click", startRound);
     closeYearButton.addEventListener("click", closeCurrentYear);

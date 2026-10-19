@@ -367,8 +367,8 @@
   <div class="pageShell">
     <header class="topBar">
       <div>
-        <p class="kicker">Realization Golf</p>
-        <h1>Realize gains. Convert to Roth. Pay the least tax.</h1>
+        <p class="kicker">Tax Simulator</p>
+        <h1>Realize gains. Convert Roth. Pay taxes.</h1>
       </div>
       <div class="scoreBlock">
         <div class="scoreHint">Score — higher is better</div>
@@ -1042,9 +1042,7 @@
     }
 
     function formatTaxAmount(taxAmount) {
-      return Number.isInteger(taxAmount)
-        ? currencyFormatter.format(taxAmount)
-        : currencyFormatterWithCents.format(taxAmount);
+      return currencyFormatter.format(taxAmount);
     }
 
     function calculateTaxFromOrdinaryIncomeBrackets(ordinaryIncomeAmount, ordinaryIncomeBrackets) {

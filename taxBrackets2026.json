@@ -1,0 +1,79 @@
+{
+  "taxYear": 2026,
+  "currency": "USD",
+  "source": {
+    "name": "IRS Revenue Procedure 2025-32",
+    "url": "https://www.irs.gov/pub/irs-drop/rp-25-32.pdf"
+  },
+  "ordinaryIncomeBracketsByFilingStatus": {
+    "marriedFilingJointly": [
+      { "marginalRate": 0.10, "minimumTaxableIncome": 0, "maximumTaxableIncome": 24800 },
+      { "marginalRate": 0.12, "minimumTaxableIncome": 24801, "maximumTaxableIncome": 100800 },
+      { "marginalRate": 0.22, "minimumTaxableIncome": 100801, "maximumTaxableIncome": 211400 },
+      { "marginalRate": 0.24, "minimumTaxableIncome": 211401, "maximumTaxableIncome": 403550 },
+      { "marginalRate": 0.32, "minimumTaxableIncome": 403551, "maximumTaxableIncome": 512450 },
+      { "marginalRate": 0.35, "minimumTaxableIncome": 512451, "maximumTaxableIncome": 768700 },
+      { "marginalRate": 0.37, "minimumTaxableIncome": 768701, "maximumTaxableIncome": null }
+    ],
+    "headOfHousehold": [
+      { "marginalRate": 0.10, "minimumTaxableIncome": 0, "maximumTaxableIncome": 17700 },
+      { "marginalRate": 0.12, "minimumTaxableIncome": 17701, "maximumTaxableIncome": 67450 },
+      { "marginalRate": 0.22, "minimumTaxableIncome": 67451, "maximumTaxableIncome": 105700 },
+      { "marginalRate": 0.24, "minimumTaxableIncome": 105701, "maximumTaxableIncome": 201750 },
+      { "marginalRate": 0.32, "minimumTaxableIncome": 201751, "maximumTaxableIncome": 256200 },
+      { "marginalRate": 0.35, "minimumTaxableIncome": 256201, "maximumTaxableIncome": 640600 },
+      { "marginalRate": 0.37, "minimumTaxableIncome": 640601, "maximumTaxableIncome": null }
+    ],
+    "singleFilers": [
+      { "marginalRate": 0.10, "minimumTaxableIncome": 0, "maximumTaxableIncome": 12400 },
+      { "marginalRate": 0.12, "minimumTaxableIncome": 12401, "maximumTaxableIncome": 50400 },
+      { "marginalRate": 0.22, "minimumTaxableIncome": 50401, "maximumTaxableIncome": 105700 },
+      { "marginalRate": 0.24, "minimumTaxableIncome": 105701, "maximumTaxableIncome": 201775 },
+      { "marginalRate": 0.32, "minimumTaxableIncome": 201776, "maximumTaxableIncome": 256225 },
+      { "marginalRate": 0.35, "minimumTaxableIncome": 256226, "maximumTaxableIncome": 640600 },
+      { "marginalRate": 0.37, "minimumTaxableIncome": 640601, "maximumTaxableIncome": null }
+    ],
+    "marriedFilingSeparately": [
+      { "marginalRate": 0.10, "minimumTaxableIncome": 0, "maximumTaxableIncome": 12400 },
+      { "marginalRate": 0.12, "minimumTaxableIncome": 12401, "maximumTaxableIncome": 50400 },
+      { "marginalRate": 0.22, "minimumTaxableIncome": 50401, "maximumTaxableIncome": 105700 },
+      { "marginalRate": 0.24, "minimumTaxableIncome": 105701, "maximumTaxableIncome": 201775 },
+      { "marginalRate": 0.32, "minimumTaxableIncome": 201776, "maximumTaxableIncome": 256225 },
+      { "marginalRate": 0.35, "minimumTaxableIncome": 256226, "maximumTaxableIncome": 384350 },
+      { "marginalRate": 0.37, "minimumTaxableIncome": 384351, "maximumTaxableIncome": null }
+    ],
+    "estatesAndTrusts": [
+      { "marginalRate": 0.10, "minimumTaxableIncome": 0, "maximumTaxableIncome": 3300 },
+      { "marginalRate": 0.24, "minimumTaxableIncome": 3301, "maximumTaxableIncome": 11700 },
+      { "marginalRate": 0.35, "minimumTaxableIncome": 11701, "maximumTaxableIncome": 16000 },
+      { "marginalRate": 0.37, "minimumTaxableIncome": 16001, "maximumTaxableIncome": null }
+    ]
+  },
+  "longTermCapitalGainsBracketsByFilingStatus": {
+    "marriedFilingJointly": [
+      { "marginalRate": 0.00, "minimumTaxableIncome": 0, "maximumTaxableIncome": 98900 },
+      { "marginalRate": 0.15, "minimumTaxableIncome": 98901, "maximumTaxableIncome": 613700 },
+      { "marginalRate": 0.20, "minimumTaxableIncome": 613701, "maximumTaxableIncome": null }
+    ],
+    "headOfHousehold": [
+      { "marginalRate": 0.00, "minimumTaxableIncome": 0, "maximumTaxableIncome": 66200 },
+      { "marginalRate": 0.15, "minimumTaxableIncome": 66201, "maximumTaxableIncome": 579600 },
+      { "marginalRate": 0.20, "minimumTaxableIncome": 579601, "maximumTaxableIncome": null }
+    ],
+    "singleFilers": [
+      { "marginalRate": 0.00, "minimumTaxableIncome": 0, "maximumTaxableIncome": 49450 },
+      { "marginalRate": 0.15, "minimumTaxableIncome": 49451, "maximumTaxableIncome": 545500 },
+      { "marginalRate": 0.20, "minimumTaxableIncome": 545501, "maximumTaxableIncome": null }
+    ],
+    "marriedFilingSeparately": [
+      { "marginalRate": 0.00, "minimumTaxableIncome": 0, "maximumTaxableIncome": 49450 },
+      { "marginalRate": 0.15, "minimumTaxableIncome": 49451, "maximumTaxableIncome": 306850 },
+      { "marginalRate": 0.20, "minimumTaxableIncome": 306851, "maximumTaxableIncome": null }
+    ],
+    "estatesAndTrusts": [
+      { "marginalRate": 0.00, "minimumTaxableIncome": 0, "maximumTaxableIncome": 3300 },
+      { "marginalRate": 0.15, "minimumTaxableIncome": 3301, "maximumTaxableIncome": 16250 },
+      { "marginalRate": 0.20, "minimumTaxableIncome": 16251, "maximumTaxableIncome": null }
+    ]
+  }
+}

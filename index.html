@@ -209,6 +209,16 @@
       color: var(--goldScore);
     }
 
+    button.selectorBubble.bracketTopSelectorBubble {
+      text-decoration: underline;
+      text-underline-offset: 0.16em;
+    }
+
+    button.selectorBubble.blendedRateSelectorBubble {
+      text-decoration: underline dashed;
+      text-underline-offset: 0.16em;
+    }
+
     .bucketName {
       color: var(--mutedCream);
       font-size: 0.78rem;
@@ -1192,10 +1202,14 @@
       const capitalGainsBrackets = loadedTaxBracketTables.longTermCapitalGainsBracketsByFilingStatus[currentGameState.selectedFilingStatus];
       const averageRateBubbles = [];
       for (const ordinaryIncomeBracket of ordinaryIncomeBrackets) {
+        const ordinaryIncomeBracketIsUnbounded = ordinaryIncomeBracket.maximumTaxableIncome === null;
         averageRateBubbles.push({
           bubbleKey: "ordinary-" + ordinaryIncomeBracket.marginalRate,
           bubbleLabel: percentFormatter.format(ordinaryIncomeBracket.marginalRate),
-          targetAverageTaxRate: ordinaryIncomeBracket.marginalRate
+          targetAverageTaxRate: ordinaryIncomeBracket.marginalRate,
+          taxKindName: "ordinary",
+          ordinaryIncomeBracketCeiling: ordinaryIncomeBracket.maximumTaxableIncome,
+          fillsThroughTopOfBar: ordinaryIncomeBracketIsUnbounded
         });
       }
       for (const capitalGainsBracket of capitalGainsBrackets) {
@@ -1297,6 +1311,17 @@
       if (selectorBubble.fillsZeroPercentCapitalGainsBracket) {
         return sliderAmountToFillZeroPercentCapitalGainsBracket(barMaximumAmount, selectorKindName);
       }
+      if (selectorBubble.taxKindName === "ordinary") {
+        if (selectorBubble.fillsThroughTopOfBar) {
+          return barMaximumAmount;
+        }
+        return clampInteger(
+          selectorBubble.ordinaryIncomeBracketCeiling
+            + standardDeductionAmountForFilingStatus(currentGameState.selectedFilingStatus),
+          0,
+          barMaximumAmount
+        );
+      }
       return sliderAmountForTargetAverageTaxRate(selectorKindName, selectorBubble.targetAverageTaxRate, barMaximumAmount);
     }
 
@@ -1374,6 +1399,13 @@
         selectorBubbleButton.dataset.selectorKindName = selectorKindName;
         selectorBubbleButton.textContent = selectorBubble.bubbleLabel;
         selectorBubbleButton.disabled = selectorBubblesAreLocked;
+        if (selectorBubble.fillsZeroPercentCapitalGainsBracket || selectorBubble.taxKindName === "ordinary") {
+          selectorBubbleButton.classList.add("bracketTopSelectorBubble");
+          selectorBubbleButton.title = "Top of bracket";
+        } else if (selectorBubble.targetAverageTaxRate !== null) {
+          selectorBubbleButton.classList.add("blendedRateSelectorBubble");
+          selectorBubbleButton.title = "Blended rate";
+        }
         if (selectorBubble.bubbleKey === selectedBubbleKey) {
           selectorBubbleButton.classList.add("selectedSelectorBubble");
         }

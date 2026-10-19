@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Realization Golf</title>
+  <style>
+    :root {
+      --backgroundInk: #141910;
+      --panelInk: #1f2619;
+      --panelEdge: #3a4630;
+      --creamText: #ebe4d4;
+      --mutedCream: #b7b09d;
+      --goldScore: #d4b44a;
+      --realizedColor: #8fb37a;
+      --unrealizedColor: #d2b15c;
+      --iraColor: #7ea0c4;
+      --rothColor: #d07a58;
+      --dangerInk: #c45c4a;
+      --inputInk: #0f130c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--backgroundInk);
+      color: var(--creamText);
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+
+    body {
+      padding: 1.25rem;
+    }
+
+    h1, h2, h3 {
+      font-family: Palatino, "Palatino Linotype", Georgia, serif;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    .pageShell {
+      max-width: 72rem;
+      margin: 0 auto;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .topBar {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: end;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--panelEdge);
+      padding-bottom: 0.85rem;
+    }
+
+    .kicker {
+      color: var(--goldScore);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .scoreBlock {
+      text-align: right;
+    }
+
+    .scoreValue {
+      font-family: "Cascadia Mono", "Consolas", monospace;
+      font-size: 2rem;
+      color: var(--goldScore);
+    }
+
+    .scoreHint {
+      color: var(--mutedCream);
+      font-size: 0.85rem;
+    }
+
+    .panel {
+      background: var(--panelInk);
+      border: 1px solid var(--panelEdge);
+      border-radius: 0.7rem;
+      padding: 1rem;
+    }
+
+    .setupGrid,
+    .bucketGrid {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .setupGrid {
+      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    }
+
+    .bucketGrid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .yearActions {
+      display: grid;
+      gap: 1.1rem;
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
+      color: var(--mutedCream);
+      font-size: 0.82rem;
+    }
+
+    input[type="number"],
+    select {
+      background: var(--inputInk);
+      color: var(--creamText);
+      border: 1px solid var(--panelEdge);
+      border-radius: 0.4rem;
+      padding: 0.45rem 0.55rem;
+      width: 100%;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--goldScore);
+    }
+
+    .bucketCard {
+      border: 1px solid var(--panelEdge);
+      border-top-width: 4px;
+      border-radius: 0.55rem;
+      padding: 0.85rem;
+      background: #181f14;
+    }
+
+    .bucketCard.realized { border-top-color: var(--realizedColor); }
+    .bucketCard.unrealized { border-top-color: var(--unrealizedColor); }
+    .bucketCard.ira { border-top-color: var(--iraColor); }
+    .bucketCard.roth { border-top-color: var(--rothColor); }
+
+    .bucketCard input[type="range"] {
+      margin-top: 0.75rem;
+    }
+
+    .bucketName {
+      color: var(--mutedCream);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .bucketValue {
+      font-family: "Cascadia Mono", "Consolas", monospace;
+      font-size: 1.35rem;
+      margin-top: 0.35rem;
+    }
+
+    .yearRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .controlRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    .sliderWithTax {
+      display: grid;
+      grid-template-columns: 1fr 13rem;
+      gap: 0.85rem;
+      align-items: center;
+    }
+
+    .taxBarColumn {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .taxBarTrack {
+      height: 0.85rem;
+      background: #3a201c;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .taxBarFill {
+      height: 100%;
+      width: 0%;
+      background: var(--dangerInk);
+    }
+
+    .taxBarReadout {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-family: "Cascadia Mono", "Consolas", monospace;
+      font-size: 0.9rem;
+    }
+
+    .taxBarAmount {
+      color: #f0b2a8;
+    }
+
+    .nextDollarRate {
+      color: var(--creamText);
+    }
+
+    .yearTotalTax {
+      font-family: "Cascadia Mono", "Consolas", monospace;
+      color: var(--goldScore);
+    }
+
+    .lastYearNote {
+      color: var(--dangerInk);
+      font-size: 0.9rem;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .buttonRow {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-top: 0.9rem;
+    }
+
+    button {
+      background: var(--goldScore);
+      color: #211c0b;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.55rem 1rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--creamText);
+      border: 1px solid var(--panelEdge);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.45rem 0.3rem;
+      border-bottom: 1px solid var(--panelEdge);
+    }
+
+    th {
+      color: var(--mutedCream);
+      font-weight: 500;
+    }
+
+    .errorBanner {
+      color: #ffd2c8;
+      background: #3b1d18;
+      border: 1px solid var(--dangerInk);
+      border-radius: 0.5rem;
+      padding: 0.8rem;
+    }
+
+    @media (max-width: 800px) {
+      .bucketGrid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .scoreBlock {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .bucketGrid,
+      .controlRow,
+      .sliderWithTax {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="pageShell">
+    <header class="topBar">
+      <div>
+        <p class="kicker">Realization Golf</p>
+        <h1>Realize gains. Convert to Roth. Pay the least tax.</h1>
+      </div>
+      <div class="scoreBlock">
+        <div class="scoreHint">Score — lower is better</div>
+        <div class="scoreValue" id="cumulativeTaxesChargedLabel">$0</div>
+        <div class="scoreHint" id="yearStatusLabel">Set up a round</div>
+      </div>
+    </header>
+
+    <p id="loadErrorBanner" class="errorBanner hidden"></p>
+
+    <section class="panel">
+      <h2>Round setup</h2>
+      <div class="setupGrid" style="margin-top: 0.85rem;">
+        <label>
+          Years
+          <input id="totalYearCountInput" type="number" min="1" step="1">
+        </label>
+        <label>
+          Filing status
+          <select id="selectedFilingStatusInput">
+            <option value="marriedFilingJointly">Married filing jointly</option>
+            <option value="headOfHousehold">Head of household</option>
+            <option value="singleFilers">Single</option>
+            <option value="marriedFilingSeparately">Married filing separately</option>
+          </select>
+        </label>
+      </div>
+      <div class="buttonRow">
+        <button id="startRoundButton" type="button">Start round</button>
+        <button id="newRoundButton" class="secondary" type="button">New round</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <label>
+        Annual investment growth
+        <div class="controlRow">
+          <input id="annualGrowthRateSlider" type="range" min="-10" max="20" step="0.1">
+          <span id="annualGrowthRateLabel">0%</span>
+        </div>
+      </label>
+    </section>
+
+    <section class="panel">
+      <div class="bucketGrid">
+        <article class="bucketCard realized">
+          <div class="bucketName">Realized Gains</div>
+          <div class="bucketValue" id="realizedGainsBasisLabel">$0</div>
+          <div class="scoreHint">Taxable account basis</div>
+          <input id="startingRealizedGainsBasisSlider" type="range" min="0" step="5000">
+        </article>
+        <article class="bucketCard unrealized">
+          <div class="bucketName">Unrealized Gains</div>
+          <div class="bucketValue" id="unrealizedGainsAmountLabel">$0</div>
+          <div class="scoreHint">Unrealized in taxable</div>
+          <input id="startingUnrealizedGainsAmountSlider" type="range" min="0" step="5000">
+        </article>
+        <article class="bucketCard ira">
+          <div class="bucketName">IRA</div>
+          <div class="bucketValue" id="individualRetirementAccountBalanceLabel">$0</div>
+          <div class="scoreHint">Pretax retirement</div>
+          <input id="startingIndividualRetirementAccountBalanceSlider" type="range" min="0" step="5000">
+        </article>
+        <article class="bucketCard roth">
+          <div class="bucketName">ROTH IRA</div>
+          <div class="bucketValue" id="rothIndividualRetirementAccountBalanceLabel">$0</div>
+          <div class="scoreHint">Tax-free retirement</div>
+          <input id="startingRothIndividualRetirementAccountBalanceSlider" type="range" min="0" step="5000">
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="yearRow">
+        <h2 id="currentYearHeading">This year</h2>
+        <p class="lastYearNote hidden" id="finalYearNotice">Last year: remaining capital gains and IRA money are realized and converted.</p>
+      </div>
+      <div class="yearActions">
+        <label>
+          Capital gains to realize
+          <div class="sliderWithTax">
+            <div class="controlRow">
+              <input id="capitalGainsToRealizeSlider" type="range" min="0" max="0" step="1" value="0">
+              <span id="capitalGainsToRealizeAmountLabel">$0</span>
+            </div>
+            <div class="taxBarColumn">
+              <div class="taxBarTrack">
+                <div id="capitalGainsTaxBarFill" class="taxBarFill"></div>
+              </div>
+              <div class="taxBarReadout">
+                <span id="capitalGainsTaxAmountLabel" class="taxBarAmount">$0</span>
+                <span id="capitalGainsNextDollarRateLabel" class="nextDollarRate">0%</span>
+              </div>
+            </div>
+          </div>
+        </label>
+        <label>
+          IRA to convert into ROTH IRA
+          <div class="sliderWithTax">
+            <div class="controlRow">
+              <input id="individualRetirementAccountConversionSlider" type="range" min="0" max="0" step="1" value="0">
+              <span id="individualRetirementAccountConversionAmountLabel">$0</span>
+            </div>
+            <div class="taxBarColumn">
+              <div class="taxBarTrack">
+                <div id="individualRetirementAccountConversionTaxBarFill" class="taxBarFill"></div>
+              </div>
+              <div class="taxBarReadout">
+                <span id="individualRetirementAccountConversionTaxAmountLabel" class="taxBarAmount">$0</span>
+                <span id="individualRetirementAccountConversionNextDollarRateLabel" class="nextDollarRate">0%</span>
+              </div>
+            </div>
+          </div>
+        </label>
+        <div class="scoreHint">This year tax <span id="thisYearTaxPreviewLabel" class="yearTotalTax">$0</span></div>
+      </div>
+      <div class="buttonRow">
+        <button id="closeYearButton" type="button" disabled>Close year</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Year ledger</h2>
+      <div style="overflow-x: auto; margin-top: 0.7rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Realized</th>
+              <th>Converted</th>
+              <th>Ordinary tax</th>
+              <th>Gains tax</th>
+              <th>Year tax</th>
+              <th>Growth</th>
+            </tr>
+          </thead>
+          <tbody id="yearHistoryTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const defaultGameParameters = {
+      totalYearCount: 5,
+      annualGrowthRatePercentage: 6,
+      selectedFilingStatus: "marriedFilingJointly",
+      startingRealizedGainsBasis: 50000,
+      startingUnrealizedGainsAmount: 250000,
+      startingIndividualRetirementAccountBalance: 400000,
+      startingRothIndividualRetirementAccountBalance: 25000,
+      startingBucketSliderMaximum: 2000000,
+      startingBucketSliderStep: 5000
+    };
+
+    const currencyFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0
+    });
+
+    const currencyFormatterWithCents = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    const percentFormatter = new Intl.NumberFormat("en-US", {
+      style: "percent",
+      maximumFractionDigits: 1
+    });
+
+    let loadedTaxBracketTables = null;
+    let currentGameState = createSetupGameState();
+
+    const totalYearCountInput = document.getElementById("totalYearCountInput");
+    const selectedFilingStatusInput = document.getElementById("selectedFilingStatusInput");
+    const startingRealizedGainsBasisSlider = document.getElementById("startingRealizedGainsBasisSlider");
+    const startingUnrealizedGainsAmountSlider = document.getElementById("startingUnrealizedGainsAmountSlider");
+    const startingIndividualRetirementAccountBalanceSlider = document.getElementById("startingIndividualRetirementAccountBalanceSlider");
+    const startingRothIndividualRetirementAccountBalanceSlider = document.getElementById("startingRothIndividualRetirementAccountBalanceSlider");
+    const annualGrowthRateSlider = document.getElementById("annualGrowthRateSlider");
+    const annualGrowthRateLabel = document.getElementById("annualGrowthRateLabel");
+    const capitalGainsToRealizeSlider = document.getElementById("capitalGainsToRealizeSlider");
+    const individualRetirementAccountConversionSlider = document.getElementById("individualRetirementAccountConversionSlider");
+    const startRoundButton = document.getElementById("startRoundButton");
+    const newRoundButton = document.getElementById("newRoundButton");
+    const closeYearButton = document.getElementById("closeYearButton");
+    const loadErrorBanner = document.getElementById("loadErrorBanner");
+
+    function createSetupGameState() {
+      return {
+        phaseName: "setup",
+        currentYearNumber: 1,
+        totalYearCount: defaultGameParameters.totalYearCount,
+        selectedFilingStatus: defaultGameParameters.selectedFilingStatus,
+        annualGrowthRatePercentage: defaultGameParameters.annualGrowthRatePercentage,
+        realizedGainsBasis: defaultGameParameters.startingRealizedGainsBasis,
+        unrealizedGainsAmount: defaultGameParameters.startingUnrealizedGainsAmount,
+        individualRetirementAccountBalance: defaultGameParameters.startingIndividualRetirementAccountBalance,
+        rothIndividualRetirementAccountBalance: defaultGameParameters.startingRothIndividualRetirementAccountBalance,
+        capitalGainsToRealizeThisYear: 0,
+        individualRetirementAccountConversionThisYear: 0,
+        cumulativeTaxesCharged: 0,
+        yearHistoryRecords: []
+      };
+    }
+
+    function clampInteger(valueToClamp, minimumValue, maximumValue) {
+      const parsedInteger = Number.isFinite(valueToClamp) ? Math.round(valueToClamp) : minimumValue;
+      return Math.min(maximumValue, Math.max(minimumValue, parsedInteger));
+    }
+
+    function snapToStartingBucketSliderStep(requestedAmount) {
+      const sliderStep = defaultGameParameters.startingBucketSliderStep;
+      const snappedAmount = Math.round(requestedAmount / sliderStep) * sliderStep;
+      return clampInteger(snappedAmount, 0, defaultGameParameters.startingBucketSliderMaximum);
+    }
+
+    function taxBarFillPercent(taxAmount, selectedAmount) {
+      if (selectedAmount <= 0) {
+        return 0;
+      }
+      return Math.min(100, (taxAmount / selectedAmount) * 100);
+    }
+
+    function formatTaxAmount(taxAmount) {
+      return Number.isInteger(taxAmount)
+        ? currencyFormatter.format(taxAmount)
+        : currencyFormatterWithCents.format(taxAmount);
+    }
+
+    function calculateTaxFromOrdinaryIncomeBrackets(ordinaryIncomeAmount, ordinaryIncomeBrackets) {
+      let totalTax = 0;
+      let highestMarginalRateUsed = 0;
+      for (const incomeBracket of ordinaryIncomeBrackets) {
+        const previousBracketCeiling = incomeBracket.minimumTaxableIncome === 0 ? 0 : incomeBracket.minimumTaxableIncome - 1;
+        const currentBracketCeiling = incomeBracket.maximumTaxableIncome === null ? Number.POSITIVE_INFINITY : incomeBracket.maximumTaxableIncome;
+        const incomeInThisBracket = Math.max(0, Math.min(ordinaryIncomeAmount, currentBracketCeiling) - previousBracketCeiling);
+        if (incomeInThisBracket > 0) {
+          totalTax += incomeInThisBracket * incomeBracket.marginalRate;
+          highestMarginalRateUsed = incomeBracket.marginalRate;
+        }
+      }
+      return {
+        totalTax: totalTax,
+        highestMarginalRateUsed: highestMarginalRateUsed
+      };
+    }
+
+    function calculateLongTermCapitalGainsTax(ordinaryIncomeAmount, capitalGainsAmount, capitalGainsBrackets) {
+      let remainingCapitalGains = capitalGainsAmount;
+      let totalTax = 0;
+      let highestMarginalRateUsed = 0;
+      for (const capitalGainsBracket of capitalGainsBrackets) {
+        const previousBracketCeiling = capitalGainsBracket.minimumTaxableIncome === 0 ? 0 : capitalGainsBracket.minimumTaxableIncome - 1;
+        const currentBracketCeiling = capitalGainsBracket.maximumTaxableIncome === null ? Number.POSITIVE_INFINITY : capitalGainsBracket.maximumTaxableIncome;
+        const overlapStart = Math.max(ordinaryIncomeAmount, previousBracketCeiling);
+        const roomInThisBracket = Math.max(0, currentBracketCeiling - overlapStart);
+        const capitalGainsInThisBracket = Math.min(remainingCapitalGains, roomInThisBracket);
+        if (capitalGainsInThisBracket > 0) {
+          totalTax += capitalGainsInThisBracket * capitalGainsBracket.marginalRate;
+          highestMarginalRateUsed = capitalGainsBracket.marginalRate;
+          remainingCapitalGains -= capitalGainsInThisBracket;
+        }
+      }
+      return {
+        totalTax: totalTax,
+        highestMarginalRateUsed: highestMarginalRateUsed
+      };
+    }
+
+    function calculateYearTaxes(ordinaryIncomeAmount, capitalGainsAmount, selectedFilingStatus) {
+      const ordinaryIncomeBrackets = loadedTaxBracketTables.ordinaryIncomeBracketsByFilingStatus[selectedFilingStatus];
+      const capitalGainsBrackets = loadedTaxBracketTables.longTermCapitalGainsBracketsByFilingStatus[selectedFilingStatus];
+      const ordinaryIncomeTaxResult = calculateTaxFromOrdinaryIncomeBrackets(ordinaryIncomeAmount, ordinaryIncomeBrackets);
+      const longTermCapitalGainsTaxResult = calculateLongTermCapitalGainsTax(ordinaryIncomeAmount, capitalGainsAmount, capitalGainsBrackets);
+      return {
+        ordinaryIncomeTax: ordinaryIncomeTaxResult.totalTax,
+        longTermCapitalGainsTax: longTermCapitalGainsTaxResult.totalTax,
+        totalTax: ordinaryIncomeTaxResult.totalTax + longTermCapitalGainsTaxResult.totalTax,
+        highestOrdinaryIncomeRateUsed: ordinaryIncomeTaxResult.highestMarginalRateUsed,
+        highestLongTermCapitalGainsRateUsed: longTermCapitalGainsTaxResult.highestMarginalRateUsed
+      };
+    }
+
+    function applyAnnualGrowthToBalances(currentBalances, annualGrowthRate) {
+      const taxableAccountMarketValue = currentBalances.realizedGainsBasis + currentBalances.unrealizedGainsAmount;
+      const taxableAccountMarketValueAfterGrowth = taxableAccountMarketValue * (1 + annualGrowthRate);
+      return {
+        realizedGainsBasis: currentBalances.realizedGainsBasis,
+        unrealizedGainsAmount: Math.max(0, Math.round(taxableAccountMarketValueAfterGrowth - currentBalances.realizedGainsBasis)),
+        individualRetirementAccountBalance: Math.max(0, Math.round(currentBalances.individualRetirementAccountBalance * (1 + annualGrowthRate))),
+        rothIndividualRetirementAccountBalance: Math.max(0, Math.round(currentBalances.rothIndividualRetirementAccountBalance * (1 + annualGrowthRate)))
+      };
+    }
+
+    function readSetupFormIntoState() {
+      currentGameState.totalYearCount = clampInteger(Number(totalYearCountInput.value), 1, 100);
+      currentGameState.selectedFilingStatus = selectedFilingStatusInput.value;
+      currentGameState.annualGrowthRatePercentage = Number(annualGrowthRateSlider.value);
+      if (currentGameState.phaseName === "setup") {
+        currentGameState.realizedGainsBasis = snapToStartingBucketSliderStep(Number(startingRealizedGainsBasisSlider.value));
+        currentGameState.unrealizedGainsAmount = snapToStartingBucketSliderStep(Number(startingUnrealizedGainsAmountSlider.value));
+        currentGameState.individualRetirementAccountBalance = snapToStartingBucketSliderStep(Number(startingIndividualRetirementAccountBalanceSlider.value));
+        currentGameState.rothIndividualRetirementAccountBalance = snapToStartingBucketSliderStep(Number(startingRothIndividualRetirementAccountBalanceSlider.value));
+      }
+    }
+
+    function isFinalYear() {
+      return currentGameState.currentYearNumber === currentGameState.totalYearCount;
+    }
+
+    function chosenYearActions() {
+      if (currentGameState.phaseName !== "playing") {
+        return {
+          capitalGainsToRealize: 0,
+          individualRetirementAccountConversion: 0
+        };
+      }
+      if (isFinalYear()) {
+        return {
+          capitalGainsToRealize: currentGameState.unrealizedGainsAmount,
+          individualRetirementAccountConversion: currentGameState.individualRetirementAccountBalance
+        };
+      }
+      return {
+        capitalGainsToRealize: clampInteger(currentGameState.capitalGainsToRealizeThisYear, 0, currentGameState.unrealizedGainsAmount),
+        individualRetirementAccountConversion: clampInteger(currentGameState.individualRetirementAccountConversionThisYear, 0, currentGameState.individualRetirementAccountBalance)
+      };
+    }
+
+    function startRound() {
+      if (!loadedTaxBracketTables) {
+        return;
+      }
+      readSetupFormIntoState();
+      currentGameState.phaseName = "playing";
+      currentGameState.currentYearNumber = 1;
+      currentGameState.capitalGainsToRealizeThisYear = 0;
+      currentGameState.individualRetirementAccountConversionThisYear = 0;
+      currentGameState.cumulativeTaxesCharged = 0;
+      currentGameState.yearHistoryRecords = [];
+      if (isFinalYear()) {
+        currentGameState.capitalGainsToRealizeThisYear = currentGameState.unrealizedGainsAmount;
+        currentGameState.individualRetirementAccountConversionThisYear = currentGameState.individualRetirementAccountBalance;
+      }
+      renderCurrentGame();
+    }
+
+    function resetRoundToSetup() {
+      currentGameState = createSetupGameState();
+      populateSetupFormFromState();
+      renderCurrentGame();
+    }
+
+    function closeCurrentYear() {
+      if (currentGameState.phaseName !== "playing" || !loadedTaxBracketTables) {
+        return;
+      }
+      const yearActions = chosenYearActions();
+      const yearTaxes = calculateYearTaxes(
+        yearActions.individualRetirementAccountConversion,
+        yearActions.capitalGainsToRealize,
+        currentGameState.selectedFilingStatus
+      );
+      currentGameState.realizedGainsBasis += yearActions.capitalGainsToRealize;
+      currentGameState.unrealizedGainsAmount -= yearActions.capitalGainsToRealize;
+      currentGameState.individualRetirementAccountBalance -= yearActions.individualRetirementAccountConversion;
+      currentGameState.rothIndividualRetirementAccountBalance += yearActions.individualRetirementAccountConversion;
+      currentGameState.cumulativeTaxesCharged += yearTaxes.totalTax;
+      const completedFinalYear = isFinalYear();
+      let growthRateAppliedThisYear = null;
+      if (!completedFinalYear) {
+        growthRateAppliedThisYear = currentGameState.annualGrowthRatePercentage / 100;
+        const balancesAfterGrowth = applyAnnualGrowthToBalances(currentGameState, growthRateAppliedThisYear);
+        currentGameState.realizedGainsBasis = balancesAfterGrowth.realizedGainsBasis;
+        currentGameState.unrealizedGainsAmount = balancesAfterGrowth.unrealizedGainsAmount;
+        currentGameState.individualRetirementAccountBalance = balancesAfterGrowth.individualRetirementAccountBalance;
+        currentGameState.rothIndividualRetirementAccountBalance = balancesAfterGrowth.rothIndividualRetirementAccountBalance;
+      }
+      currentGameState.yearHistoryRecords.push({
+        yearNumber: currentGameState.currentYearNumber,
+        capitalGainsRealized: yearActions.capitalGainsToRealize,
+        individualRetirementAccountConverted: yearActions.individualRetirementAccountConversion,
+        ordinaryIncomeTax: yearTaxes.ordinaryIncomeTax,
+        longTermCapitalGainsTax: yearTaxes.longTermCapitalGainsTax,
+        totalTax: yearTaxes.totalTax,
+        growthRateApplied: growthRateAppliedThisYear
+      });
+      if (completedFinalYear) {
+        currentGameState.phaseName = "finished";
+      } else {
+        currentGameState.currentYearNumber += 1;
+        currentGameState.capitalGainsToRealizeThisYear = 0;
+        currentGameState.individualRetirementAccountConversionThisYear = 0;
+        if (isFinalYear()) {
+          currentGameState.capitalGainsToRealizeThisYear = currentGameState.unrealizedGainsAmount;
+          currentGameState.individualRetirementAccountConversionThisYear = currentGameState.individualRetirementAccountBalance;
+        }
+      }
+      renderCurrentGame();
+    }
+
+    function populateSetupFormFromState() {
+      totalYearCountInput.value = String(currentGameState.totalYearCount);
+      selectedFilingStatusInput.value = currentGameState.selectedFilingStatus;
+      startingRealizedGainsBasisSlider.max = String(defaultGameParameters.startingBucketSliderMaximum);
+      startingUnrealizedGainsAmountSlider.max = String(defaultGameParameters.startingBucketSliderMaximum);
+      startingIndividualRetirementAccountBalanceSlider.max = String(defaultGameParameters.startingBucketSliderMaximum);
+      startingRothIndividualRetirementAccountBalanceSlider.max = String(defaultGameParameters.startingBucketSliderMaximum);
+      startingRealizedGainsBasisSlider.step = String(defaultGameParameters.startingBucketSliderStep);
+      startingUnrealizedGainsAmountSlider.step = String(defaultGameParameters.startingBucketSliderStep);
+      startingIndividualRetirementAccountBalanceSlider.step = String(defaultGameParameters.startingBucketSliderStep);
+      startingRothIndividualRetirementAccountBalanceSlider.step = String(defaultGameParameters.startingBucketSliderStep);
+      startingRealizedGainsBasisSlider.value = String(currentGameState.realizedGainsBasis);
+      startingUnrealizedGainsAmountSlider.value = String(currentGameState.unrealizedGainsAmount);
+      startingIndividualRetirementAccountBalanceSlider.value = String(currentGameState.individualRetirementAccountBalance);
+      startingRothIndividualRetirementAccountBalanceSlider.value = String(currentGameState.rothIndividualRetirementAccountBalance);
+      annualGrowthRateSlider.value = String(currentGameState.annualGrowthRatePercentage);
+    }
+
+    function syncActionInputsFromState() {
+      const yearActions = chosenYearActions();
+      capitalGainsToRealizeSlider.max = String(currentGameState.unrealizedGainsAmount);
+      capitalGainsToRealizeSlider.value = String(yearActions.capitalGainsToRealize);
+      document.getElementById("capitalGainsToRealizeAmountLabel").textContent = currencyFormatter.format(yearActions.capitalGainsToRealize);
+      individualRetirementAccountConversionSlider.max = String(currentGameState.individualRetirementAccountBalance);
+      individualRetirementAccountConversionSlider.value = String(yearActions.individualRetirementAccountConversion);
+      document.getElementById("individualRetirementAccountConversionAmountLabel").textContent = currencyFormatter.format(yearActions.individualRetirementAccountConversion);
+    }
+
+    function renderYearHistory() {
+      const yearHistoryTableBody = document.getElementById("yearHistoryTableBody");
+      yearHistoryTableBody.replaceChildren();
+      for (const yearHistoryRecord of currentGameState.yearHistoryRecords) {
+        const tableRow = document.createElement("tr");
+        const cellValues = [
+          String(yearHistoryRecord.yearNumber),
+          currencyFormatter.format(yearHistoryRecord.capitalGainsRealized),
+          currencyFormatter.format(yearHistoryRecord.individualRetirementAccountConverted),
+          formatTaxAmount(yearHistoryRecord.ordinaryIncomeTax),
+          formatTaxAmount(yearHistoryRecord.longTermCapitalGainsTax),
+          formatTaxAmount(yearHistoryRecord.totalTax),
+          yearHistoryRecord.growthRateApplied === null ? "—" : percentFormatter.format(yearHistoryRecord.growthRateApplied)
+        ];
+        for (const cellValue of cellValues) {
+          const tableCell = document.createElement("td");
+          tableCell.textContent = cellValue;
+          tableRow.appendChild(tableCell);
+        }
+        yearHistoryTableBody.appendChild(tableRow);
+      }
+    }
+
+    function renderTaxPreview() {
+      const yearActions = chosenYearActions();
+      const emptyTaxPreview = !loadedTaxBracketTables || currentGameState.phaseName === "setup";
+      const yearTaxes = emptyTaxPreview
+        ? {
+          ordinaryIncomeTax: 0,
+          longTermCapitalGainsTax: 0,
+          totalTax: 0
+        }
+        : calculateYearTaxes(
+          yearActions.individualRetirementAccountConversion,
+          yearActions.capitalGainsToRealize,
+          currentGameState.selectedFilingStatus
+        );
+      const nextDollarCapitalGainsTax = emptyTaxPreview
+        ? 0
+        : calculateYearTaxes(
+          yearActions.individualRetirementAccountConversion,
+          yearActions.capitalGainsToRealize + 1,
+          currentGameState.selectedFilingStatus
+        ).totalTax - yearTaxes.totalTax;
+      const nextDollarConversionTax = emptyTaxPreview
+        ? 0
+        : calculateYearTaxes(
+          yearActions.individualRetirementAccountConversion + 1,
+          yearActions.capitalGainsToRealize,
+          currentGameState.selectedFilingStatus
+        ).totalTax - yearTaxes.totalTax;
+      document.getElementById("thisYearTaxPreviewLabel").textContent = formatTaxAmount(yearTaxes.totalTax);
+      document.getElementById("capitalGainsTaxAmountLabel").textContent = formatTaxAmount(yearTaxes.longTermCapitalGainsTax);
+      document.getElementById("individualRetirementAccountConversionTaxAmountLabel").textContent = formatTaxAmount(yearTaxes.ordinaryIncomeTax);
+      document.getElementById("capitalGainsNextDollarRateLabel").textContent = "→ " + percentFormatter.format(nextDollarCapitalGainsTax);
+      document.getElementById("individualRetirementAccountConversionNextDollarRateLabel").textContent = "→ " + percentFormatter.format(nextDollarConversionTax);
+      document.getElementById("capitalGainsTaxBarFill").style.width = taxBarFillPercent(yearTaxes.longTermCapitalGainsTax, yearActions.capitalGainsToRealize) + "%";
+      document.getElementById("individualRetirementAccountConversionTaxBarFill").style.width = taxBarFillPercent(yearTaxes.ordinaryIncomeTax, yearActions.individualRetirementAccountConversion) + "%";
+    }
+
+    function renderCurrentGame() {
+      const setupInputsAreLocked = currentGameState.phaseName !== "setup";
+      const actionInputsAreLocked = currentGameState.phaseName !== "playing" || isFinalYear();
+      totalYearCountInput.disabled = setupInputsAreLocked;
+      selectedFilingStatusInput.disabled = setupInputsAreLocked;
+      startingRealizedGainsBasisSlider.disabled = setupInputsAreLocked;
+      startingUnrealizedGainsAmountSlider.disabled = setupInputsAreLocked;
+      startingIndividualRetirementAccountBalanceSlider.disabled = setupInputsAreLocked;
+      startingRothIndividualRetirementAccountBalanceSlider.disabled = setupInputsAreLocked;
+      startingRealizedGainsBasisSlider.classList.toggle("hidden", setupInputsAreLocked);
+      startingUnrealizedGainsAmountSlider.classList.toggle("hidden", setupInputsAreLocked);
+      startingIndividualRetirementAccountBalanceSlider.classList.toggle("hidden", setupInputsAreLocked);
+      startingRothIndividualRetirementAccountBalanceSlider.classList.toggle("hidden", setupInputsAreLocked);
+      capitalGainsToRealizeSlider.disabled = actionInputsAreLocked;
+      individualRetirementAccountConversionSlider.disabled = actionInputsAreLocked;
+      startRoundButton.disabled = !loadedTaxBracketTables || currentGameState.phaseName !== "setup";
+      closeYearButton.disabled = !loadedTaxBracketTables || currentGameState.phaseName !== "playing";
+      closeYearButton.textContent = currentGameState.phaseName === "playing" && isFinalYear()
+        ? "Finish — realize and convert remaining"
+        : "Close year";
+      document.getElementById("finalYearNotice").classList.toggle("hidden", !(currentGameState.phaseName === "playing" && isFinalYear()));
+      document.getElementById("realizedGainsBasisLabel").textContent = currencyFormatter.format(currentGameState.realizedGainsBasis);
+      document.getElementById("unrealizedGainsAmountLabel").textContent = currencyFormatter.format(currentGameState.unrealizedGainsAmount);
+      document.getElementById("individualRetirementAccountBalanceLabel").textContent = currencyFormatter.format(currentGameState.individualRetirementAccountBalance);
+      document.getElementById("rothIndividualRetirementAccountBalanceLabel").textContent = currencyFormatter.format(currentGameState.rothIndividualRetirementAccountBalance);
+      document.getElementById("cumulativeTaxesChargedLabel").textContent = formatTaxAmount(currentGameState.cumulativeTaxesCharged);
+      annualGrowthRateLabel.textContent = percentFormatter.format(currentGameState.annualGrowthRatePercentage / 100);
+      if (currentGameState.phaseName === "setup") {
+        document.getElementById("yearStatusLabel").textContent = "Set up a round";
+        document.getElementById("currentYearHeading").textContent = "This year";
+      } else if (currentGameState.phaseName === "playing") {
+        document.getElementById("yearStatusLabel").textContent = "Year " + currentGameState.currentYearNumber + " of " + currentGameState.totalYearCount;
+        document.getElementById("currentYearHeading").textContent = "Year " + currentGameState.currentYearNumber + " of " + currentGameState.totalYearCount;
+      } else {
+        document.getElementById("yearStatusLabel").textContent = "Round complete";
+        document.getElementById("currentYearHeading").textContent = "Round complete";
+      }
+      syncActionInputsFromState();
+      renderTaxPreview();
+      renderYearHistory();
+    }
+
+    function assignCapitalGainsToRealize(requestedAmount) {
+      currentGameState.capitalGainsToRealizeThisYear = clampInteger(requestedAmount, 0, currentGameState.unrealizedGainsAmount);
+      renderCurrentGame();
+    }
+
+    function assignIndividualRetirementAccountConversion(requestedAmount) {
+      currentGameState.individualRetirementAccountConversionThisYear = clampInteger(requestedAmount, 0, currentGameState.individualRetirementAccountBalance);
+      renderCurrentGame();
+    }
+
+    totalYearCountInput.addEventListener("input", function () {
+      readSetupFormIntoState();
+      renderCurrentGame();
+    });
+    selectedFilingStatusInput.addEventListener("change", function () {
+      readSetupFormIntoState();
+      renderCurrentGame();
+    });
+    startingRealizedGainsBasisSlider.addEventListener("input", function () {
+      readSetupFormIntoState();
+      renderCurrentGame();
+    });
+    startingUnrealizedGainsAmountSlider.addEventListener("input", function () {
+      readSetupFormIntoState();
+      renderCurrentGame();
+    });
+    startingIndividualRetirementAccountBalanceSlider.addEventListener("input", function () {
+      readSetupFormIntoState();
+      renderCurrentGame();
+    });
+    startingRothIndividualRetirementAccountBalanceSlider.addEventListener("input", function () {
+      readSetupFormIntoState();
+      renderCurrentGame();
+    });
+    annualGrowthRateSlider.addEventListener("input", function () {
+      currentGameState.annualGrowthRatePercentage = Number(annualGrowthRateSlider.value);
+      renderCurrentGame();
+    });
+    capitalGainsToRealizeSlider.addEventListener("input", function () {
+      assignCapitalGainsToRealize(Number(capitalGainsToRealizeSlider.value));
+    });
+    individualRetirementAccountConversionSlider.addEventListener("input", function () {
+      assignIndividualRetirementAccountConversion(Number(individualRetirementAccountConversionSlider.value));
+    });
+    startRoundButton.addEventListener("click", startRound);
+    newRoundButton.addEventListener("click", resetRoundToSetup);
+    closeYearButton.addEventListener("click", closeCurrentYear);
+
+    populateSetupFormFromState();
+    renderCurrentGame();
+
+    fetch("./taxBrackets2026.json")
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("Could not load taxBrackets2026.json");
+        }
+        return response.json();
+      })
+      .then(function (taxBracketTables) {
+        loadedTaxBracketTables = taxBracketTables;
+        loadErrorBanner.classList.add("hidden");
+        renderCurrentGame();
+      })
+      .catch(function () {
+        loadErrorBanner.textContent = "Could not load taxBrackets2026.json. Serve this folder over HTTP, such as GitHub Pages.";
+        loadErrorBanner.classList.remove("hidden");
+      });
+  </script>
+</body>
+</html>

@@ -94,8 +94,7 @@
     }
 
     .setupGrid,
-    .bucketGrid,
-    .actionGrid {
+    .bucketGrid {
       display: grid;
       gap: 0.85rem;
     }
@@ -108,8 +107,9 @@
       grid-template-columns: repeat(4, 1fr);
     }
 
-    .actionGrid {
-      grid-template-columns: 1.4fr 0.8fr;
+    .yearActions {
+      display: grid;
+      gap: 1.1rem;
     }
 
     label {
@@ -147,6 +147,10 @@
     .bucketCard.ira { border-top-color: var(--iraColor); }
     .bucketCard.roth { border-top-color: var(--rothColor); }
 
+    .bucketCard input[type="range"] {
+      margin-top: 0.75rem;
+    }
+
     .bucketName {
       color: var(--mutedCream);
       font-size: 0.78rem;
@@ -175,17 +179,49 @@
       align-items: center;
     }
 
-    .previewBox {
-      border: 1px dashed var(--panelEdge);
-      border-radius: 0.5rem;
-      padding: 0.8rem;
+    .sliderWithTax {
+      display: grid;
+      grid-template-columns: 1fr 13rem;
+      gap: 0.85rem;
+      align-items: center;
+    }
+
+    .taxBarColumn {
       display: grid;
       gap: 0.35rem;
     }
 
-    .previewTax {
+    .taxBarTrack {
+      height: 0.85rem;
+      background: #3a201c;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .taxBarFill {
+      height: 100%;
+      width: 0%;
+      background: var(--dangerInk);
+    }
+
+    .taxBarReadout {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
       font-family: "Cascadia Mono", "Consolas", monospace;
-      font-size: 1.4rem;
+      font-size: 0.9rem;
+    }
+
+    .taxBarAmount {
+      color: #f0b2a8;
+    }
+
+    .nextDollarRate {
+      color: var(--creamText);
+    }
+
+    .yearTotalTax {
+      font-family: "Cascadia Mono", "Consolas", monospace;
       color: var(--goldScore);
     }
 
@@ -252,8 +288,7 @@
     }
 
     @media (max-width: 800px) {
-      .bucketGrid,
-      .actionGrid {
+      .bucketGrid {
         grid-template-columns: 1fr 1fr;
       }
 
@@ -264,8 +299,8 @@
 
     @media (max-width: 520px) {
       .bucketGrid,
-      .actionGrid,
-      .controlRow {
+      .controlRow,
+      .sliderWithTax {
         grid-template-columns: 1fr;
       }
     }
@@ -303,61 +338,48 @@
             <option value="marriedFilingSeparately">Married filing separately</option>
           </select>
         </label>
-        <label>
-          Realized Gains start
-          <input id="startingRealizedGainsBasisInput" type="number" min="0" step="1">
-        </label>
-        <label>
-          Unrealized Gains start
-          <input id="startingUnrealizedGainsAmountInput" type="number" min="0" step="1">
-        </label>
-        <label>
-          IRA start
-          <input id="startingIndividualRetirementAccountBalanceInput" type="number" min="0" step="1">
-        </label>
-        <label>
-          ROTH IRA start
-          <input id="startingRothIndividualRetirementAccountBalanceInput" type="number" min="0" step="1">
-        </label>
       </div>
-      <div class="buttonRow">
-        <button id="startRoundButton" type="button">Start round</button>
-        <button id="newRoundButton" class="secondary" type="button">New round</button>
-      </div>
-    </section>
-
-    <section class="panel">
+      <br/>
+      <br/>
       <label>
         Annual investment growth
         <div class="controlRow">
-          <input id="annualGrowthRateSlider" type="range" min="0" max="20" step="0.1">
+          <input id="annualGrowthRateSlider" type="range" min="-10" max="20" step="0.1">
           <span id="annualGrowthRateLabel">0%</span>
         </div>
       </label>
-    </section>
-
-    <section class="panel">
+      <br/>
+      <br/>
       <div class="bucketGrid">
         <article class="bucketCard realized">
           <div class="bucketName">Realized Gains</div>
           <div class="bucketValue" id="realizedGainsBasisLabel">$0</div>
           <div class="scoreHint">Taxable account basis</div>
+          <input id="startingRealizedGainsBasisSlider" type="range" min="0" step="5000">
         </article>
         <article class="bucketCard unrealized">
           <div class="bucketName">Unrealized Gains</div>
           <div class="bucketValue" id="unrealizedGainsAmountLabel">$0</div>
           <div class="scoreHint">Unrealized in taxable</div>
+          <input id="startingUnrealizedGainsAmountSlider" type="range" min="0" step="5000">
         </article>
         <article class="bucketCard ira">
           <div class="bucketName">IRA</div>
           <div class="bucketValue" id="individualRetirementAccountBalanceLabel">$0</div>
           <div class="scoreHint">Pretax retirement</div>
+          <input id="startingIndividualRetirementAccountBalanceSlider" type="range" min="0" step="5000">
         </article>
         <article class="bucketCard roth">
           <div class="bucketName">ROTH IRA</div>
           <div class="bucketValue" id="rothIndividualRetirementAccountBalanceLabel">$0</div>
           <div class="scoreHint">Tax-free retirement</div>
+          <input id="startingRothIndividualRetirementAccountBalanceSlider" type="range" min="0" step="5000">
         </article>
+      </div>
+      <h2>Start round</h2>  
+      <div class="buttonRow">
+        <button id="startRoundButton" type="button">Start round</button>
+        <button id="newRoundButton" class="secondary" type="button">New round</button>
       </div>
     </section>
 
@@ -366,30 +388,44 @@
         <h2 id="currentYearHeading">This year</h2>
         <p class="lastYearNote hidden" id="finalYearNotice">Last year: remaining capital gains and IRA money are realized and converted.</p>
       </div>
-      <div class="actionGrid">
-        <div>
-          <label>
-            Capital gains to realize
+      <div class="yearActions">
+        <label>
+          Capital gains to realize
+          <div class="sliderWithTax">
             <div class="controlRow">
               <input id="capitalGainsToRealizeSlider" type="range" min="0" max="0" step="1" value="0">
-              <input id="capitalGainsToRealizeInput" type="number" min="0" step="1" value="0">
+              <span id="capitalGainsToRealizeAmountLabel">$0</span>
             </div>
-          </label>
-          <label style="margin-top: 0.8rem;">
-            IRA to convert into ROTH IRA
+            <div class="taxBarColumn">
+              <div class="taxBarTrack">
+                <div id="capitalGainsTaxBarFill" class="taxBarFill"></div>
+              </div>
+              <div class="taxBarReadout">
+                <span id="capitalGainsTaxAmountLabel" class="taxBarAmount">$0</span>
+                <span id="capitalGainsNextDollarRateLabel" class="nextDollarRate">0%</span>
+              </div>
+            </div>
+          </div>
+        </label>
+        <label>
+          IRA to convert into ROTH IRA
+          <div class="sliderWithTax">
             <div class="controlRow">
               <input id="individualRetirementAccountConversionSlider" type="range" min="0" max="0" step="1" value="0">
-              <input id="individualRetirementAccountConversionInput" type="number" min="0" step="1" value="0">
+              <span id="individualRetirementAccountConversionAmountLabel">$0</span>
             </div>
-          </label>
-        </div>
-        <div class="previewBox">
-          <div class="scoreHint">This year tax</div>
-          <div class="previewTax" id="thisYearTaxPreviewLabel">$0</div>
-          <div class="scoreHint" id="ordinaryIncomeTaxPreviewLabel">Ordinary: $0</div>
-          <div class="scoreHint" id="longTermCapitalGainsTaxPreviewLabel">Capital gains: $0</div>
-          <div class="scoreHint" id="bracketHintLabel"></div>
-        </div>
+            <div class="taxBarColumn">
+              <div class="taxBarTrack">
+                <div id="individualRetirementAccountConversionTaxBarFill" class="taxBarFill"></div>
+              </div>
+              <div class="taxBarReadout">
+                <span id="individualRetirementAccountConversionTaxAmountLabel" class="taxBarAmount">$0</span>
+                <span id="individualRetirementAccountConversionNextDollarRateLabel" class="nextDollarRate">0%</span>
+              </div>
+            </div>
+          </div>
+        </label>
+        <div class="scoreHint">This year tax <span id="thisYearTaxPreviewLabel" class="yearTotalTax">$0</span></div>
       </div>
       <div class="buttonRow">
         <button id="closeYearButton" type="button" disabled>Close year</button>
@@ -425,7 +461,9 @@
       startingRealizedGainsBasis: 50000,
       startingUnrealizedGainsAmount: 250000,
       startingIndividualRetirementAccountBalance: 400000,
-      startingRothIndividualRetirementAccountBalance: 25000
+      startingRothIndividualRetirementAccountBalance: 25000,
+      startingBucketSliderMaximum: 2000000,
+      startingBucketSliderStep: 5000
     };
 
     const currencyFormatter = new Intl.NumberFormat("en-US", {
@@ -451,16 +489,14 @@
 
     const totalYearCountInput = document.getElementById("totalYearCountInput");
     const selectedFilingStatusInput = document.getElementById("selectedFilingStatusInput");
-    const startingRealizedGainsBasisInput = document.getElementById("startingRealizedGainsBasisInput");
-    const startingUnrealizedGainsAmountInput = document.getElementById("startingUnrealizedGainsAmountInput");
-    const startingIndividualRetirementAccountBalanceInput = document.getElementById("startingIndividualRetirementAccountBalanceInput");
-    const startingRothIndividualRetirementAccountBalanceInput = document.getElementById("startingRothIndividualRetirementAccountBalanceInput");
+    const startingRealizedGainsBasisSlider = document.getElementById("startingRealizedGainsBasisSlider");
+    const startingUnrealizedGainsAmountSlider = document.getElementById("startingUnrealizedGainsAmountSlider");
+    const startingIndividualRetirementAccountBalanceSlider = document.getElementById("startingIndividualRetirementAccountBalanceSlider");
+    const startingRothIndividualRetirementAccountBalanceSlider = document.getElementById("startingRothIndividualRetirementAccountBalanceSlider");
     const annualGrowthRateSlider = document.getElementById("annualGrowthRateSlider");
     const annualGrowthRateLabel = document.getElementById("annualGrowthRateLabel");
     const capitalGainsToRealizeSlider = document.getElementById("capitalGainsToRealizeSlider");
-    const capitalGainsToRealizeInput = document.getElementById("capitalGainsToRealizeInput");
     const individualRetirementAccountConversionSlider = document.getElementById("individualRetirementAccountConversionSlider");
-    const individualRetirementAccountConversionInput = document.getElementById("individualRetirementAccountConversionInput");
     const startRoundButton = document.getElementById("startRoundButton");
     const newRoundButton = document.getElementById("newRoundButton");
     const closeYearButton = document.getElementById("closeYearButton");
@@ -487,6 +523,19 @@
     function clampInteger(valueToClamp, minimumValue, maximumValue) {
       const parsedInteger = Number.isFinite(valueToClamp) ? Math.round(valueToClamp) : minimumValue;
       return Math.min(maximumValue, Math.max(minimumValue, parsedInteger));
+    }
+
+    function snapToStartingBucketSliderStep(requestedAmount) {
+      const sliderStep = defaultGameParameters.startingBucketSliderStep;
+      const snappedAmount = Math.round(requestedAmount / sliderStep) * sliderStep;
+      return clampInteger(snappedAmount, 0, defaultGameParameters.startingBucketSliderMaximum);
+    }
+
+    function taxBarFillPercent(taxAmount, selectedAmount) {
+      if (selectedAmount <= 0) {
+        return 0;
+      }
+      return Math.min(100, (taxAmount / selectedAmount) * 100);
     }
 
     function formatTaxAmount(taxAmount) {
@@ -554,9 +603,9 @@
       const taxableAccountMarketValueAfterGrowth = taxableAccountMarketValue * (1 + annualGrowthRate);
       return {
         realizedGainsBasis: currentBalances.realizedGainsBasis,
-        unrealizedGainsAmount: Math.round(taxableAccountMarketValueAfterGrowth - currentBalances.realizedGainsBasis),
-        individualRetirementAccountBalance: Math.round(currentBalances.individualRetirementAccountBalance * (1 + annualGrowthRate)),
-        rothIndividualRetirementAccountBalance: Math.round(currentBalances.rothIndividualRetirementAccountBalance * (1 + annualGrowthRate))
+        unrealizedGainsAmount: Math.max(0, Math.round(taxableAccountMarketValueAfterGrowth - currentBalances.realizedGainsBasis)),
+        individualRetirementAccountBalance: Math.max(0, Math.round(currentBalances.individualRetirementAccountBalance * (1 + annualGrowthRate))),
+        rothIndividualRetirementAccountBalance: Math.max(0, Math.round(currentBalances.rothIndividualRetirementAccountBalance * (1 + annualGrowthRate)))
       };
     }
 
@@ -565,10 +614,10 @@
       currentGameState.selectedFilingStatus = selectedFilingStatusInput.value;
       currentGameState.annualGrowthRatePercentage = Number(annualGrowthRateSlider.value);
       if (currentGameState.phaseName === "setup") {
-        currentGameState.realizedGainsBasis = clampInteger(Number(startingRealizedGainsBasisInput.value), 0, 1000000000);
-        currentGameState.unrealizedGainsAmount = clampInteger(Number(startingUnrealizedGainsAmountInput.value), 0, 1000000000);
-        currentGameState.individualRetirementAccountBalance = clampInteger(Number(startingIndividualRetirementAccountBalanceInput.value), 0, 1000000000);
-        currentGameState.rothIndividualRetirementAccountBalance = clampInteger(Number(startingRothIndividualRetirementAccountBalanceInput.value), 0, 1000000000);
+        currentGameState.realizedGainsBasis = snapToStartingBucketSliderStep(Number(startingRealizedGainsBasisSlider.value));
+        currentGameState.unrealizedGainsAmount = snapToStartingBucketSliderStep(Number(startingUnrealizedGainsAmountSlider.value));
+        currentGameState.individualRetirementAccountBalance = snapToStartingBucketSliderStep(Number(startingIndividualRetirementAccountBalanceSlider.value));
+        currentGameState.rothIndividualRetirementAccountBalance = snapToStartingBucketSliderStep(Number(startingRothIndividualRetirementAccountBalanceSlider.value));
       }
     }
 
@@ -670,10 +719,18 @@
     function populateSetupFormFromState() {
       totalYearCountInput.value = String(currentGameState.totalYearCount);
       selectedFilingStatusInput.value = currentGameState.selectedFilingStatus;
-      startingRealizedGainsBasisInput.value = String(currentGameState.realizedGainsBasis);
-      startingUnrealizedGainsAmountInput.value = String(currentGameState.unrealizedGainsAmount);
-      startingIndividualRetirementAccountBalanceInput.value = String(currentGameState.individualRetirementAccountBalance);
-      startingRothIndividualRetirementAccountBalanceInput.value = String(currentGameState.rothIndividualRetirementAccountBalance);
+      startingRealizedGainsBasisSlider.max = String(defaultGameParameters.startingBucketSliderMaximum);
+      startingUnrealizedGainsAmountSlider.max = String(defaultGameParameters.startingBucketSliderMaximum);
+      startingIndividualRetirementAccountBalanceSlider.max = String(defaultGameParameters.startingBucketSliderMaximum);
+      startingRothIndividualRetirementAccountBalanceSlider.max = String(defaultGameParameters.startingBucketSliderMaximum);
+      startingRealizedGainsBasisSlider.step = String(defaultGameParameters.startingBucketSliderStep);
+      startingUnrealizedGainsAmountSlider.step = String(defaultGameParameters.startingBucketSliderStep);
+      startingIndividualRetirementAccountBalanceSlider.step = String(defaultGameParameters.startingBucketSliderStep);
+      startingRothIndividualRetirementAccountBalanceSlider.step = String(defaultGameParameters.startingBucketSliderStep);
+      startingRealizedGainsBasisSlider.value = String(currentGameState.realizedGainsBasis);
+      startingUnrealizedGainsAmountSlider.value = String(currentGameState.unrealizedGainsAmount);
+      startingIndividualRetirementAccountBalanceSlider.value = String(currentGameState.individualRetirementAccountBalance);
+      startingRothIndividualRetirementAccountBalanceSlider.value = String(currentGameState.rothIndividualRetirementAccountBalance);
       annualGrowthRateSlider.value = String(currentGameState.annualGrowthRatePercentage);
     }
 
@@ -681,12 +738,10 @@
       const yearActions = chosenYearActions();
       capitalGainsToRealizeSlider.max = String(currentGameState.unrealizedGainsAmount);
       capitalGainsToRealizeSlider.value = String(yearActions.capitalGainsToRealize);
-      capitalGainsToRealizeInput.max = String(currentGameState.unrealizedGainsAmount);
-      capitalGainsToRealizeInput.value = String(yearActions.capitalGainsToRealize);
+      document.getElementById("capitalGainsToRealizeAmountLabel").textContent = currencyFormatter.format(yearActions.capitalGainsToRealize);
       individualRetirementAccountConversionSlider.max = String(currentGameState.individualRetirementAccountBalance);
       individualRetirementAccountConversionSlider.value = String(yearActions.individualRetirementAccountConversion);
-      individualRetirementAccountConversionInput.max = String(currentGameState.individualRetirementAccountBalance);
-      individualRetirementAccountConversionInput.value = String(yearActions.individualRetirementAccountConversion);
+      document.getElementById("individualRetirementAccountConversionAmountLabel").textContent = currencyFormatter.format(yearActions.individualRetirementAccountConversion);
     }
 
     function renderYearHistory() {
@@ -714,24 +769,39 @@
 
     function renderTaxPreview() {
       const yearActions = chosenYearActions();
-      if (!loadedTaxBracketTables || currentGameState.phaseName === "setup") {
-        document.getElementById("thisYearTaxPreviewLabel").textContent = "$0";
-        document.getElementById("ordinaryIncomeTaxPreviewLabel").textContent = "Ordinary: $0";
-        document.getElementById("longTermCapitalGainsTaxPreviewLabel").textContent = "Capital gains: $0";
-        document.getElementById("bracketHintLabel").textContent = "";
-        return;
-      }
-      const yearTaxes = calculateYearTaxes(
-        yearActions.individualRetirementAccountConversion,
-        yearActions.capitalGainsToRealize,
-        currentGameState.selectedFilingStatus
-      );
+      const emptyTaxPreview = !loadedTaxBracketTables || currentGameState.phaseName === "setup";
+      const yearTaxes = emptyTaxPreview
+        ? {
+          ordinaryIncomeTax: 0,
+          longTermCapitalGainsTax: 0,
+          totalTax: 0
+        }
+        : calculateYearTaxes(
+          yearActions.individualRetirementAccountConversion,
+          yearActions.capitalGainsToRealize,
+          currentGameState.selectedFilingStatus
+        );
+      const nextDollarCapitalGainsTax = emptyTaxPreview
+        ? 0
+        : calculateYearTaxes(
+          yearActions.individualRetirementAccountConversion,
+          yearActions.capitalGainsToRealize + 1,
+          currentGameState.selectedFilingStatus
+        ).totalTax - yearTaxes.totalTax;
+      const nextDollarConversionTax = emptyTaxPreview
+        ? 0
+        : calculateYearTaxes(
+          yearActions.individualRetirementAccountConversion + 1,
+          yearActions.capitalGainsToRealize,
+          currentGameState.selectedFilingStatus
+        ).totalTax - yearTaxes.totalTax;
       document.getElementById("thisYearTaxPreviewLabel").textContent = formatTaxAmount(yearTaxes.totalTax);
-      document.getElementById("ordinaryIncomeTaxPreviewLabel").textContent = "Ordinary: " + formatTaxAmount(yearTaxes.ordinaryIncomeTax);
-      document.getElementById("longTermCapitalGainsTaxPreviewLabel").textContent = "Capital gains: " + formatTaxAmount(yearTaxes.longTermCapitalGainsTax);
-      document.getElementById("bracketHintLabel").textContent =
-        "Top ordinary " + percentFormatter.format(yearTaxes.highestOrdinaryIncomeRateUsed) +
-        " · Top gains " + percentFormatter.format(yearTaxes.highestLongTermCapitalGainsRateUsed);
+      document.getElementById("capitalGainsTaxAmountLabel").textContent = formatTaxAmount(yearTaxes.longTermCapitalGainsTax);
+      document.getElementById("individualRetirementAccountConversionTaxAmountLabel").textContent = formatTaxAmount(yearTaxes.ordinaryIncomeTax);
+      document.getElementById("capitalGainsNextDollarRateLabel").textContent = "→ " + percentFormatter.format(nextDollarCapitalGainsTax);
+      document.getElementById("individualRetirementAccountConversionNextDollarRateLabel").textContent = "→ " + percentFormatter.format(nextDollarConversionTax);
+      document.getElementById("capitalGainsTaxBarFill").style.width = taxBarFillPercent(yearTaxes.longTermCapitalGainsTax, yearActions.capitalGainsToRealize) + "%";
+      document.getElementById("individualRetirementAccountConversionTaxBarFill").style.width = taxBarFillPercent(yearTaxes.ordinaryIncomeTax, yearActions.individualRetirementAccountConversion) + "%";
     }
 
     function renderCurrentGame() {
@@ -739,14 +809,16 @@
       const actionInputsAreLocked = currentGameState.phaseName !== "playing" || isFinalYear();
       totalYearCountInput.disabled = setupInputsAreLocked;
       selectedFilingStatusInput.disabled = setupInputsAreLocked;
-      startingRealizedGainsBasisInput.disabled = setupInputsAreLocked;
-      startingUnrealizedGainsAmountInput.disabled = setupInputsAreLocked;
-      startingIndividualRetirementAccountBalanceInput.disabled = setupInputsAreLocked;
-      startingRothIndividualRetirementAccountBalanceInput.disabled = setupInputsAreLocked;
+      startingRealizedGainsBasisSlider.disabled = setupInputsAreLocked;
+      startingUnrealizedGainsAmountSlider.disabled = setupInputsAreLocked;
+      startingIndividualRetirementAccountBalanceSlider.disabled = setupInputsAreLocked;
+      startingRothIndividualRetirementAccountBalanceSlider.disabled = setupInputsAreLocked;
+      startingRealizedGainsBasisSlider.classList.toggle("hidden", setupInputsAreLocked);
+      startingUnrealizedGainsAmountSlider.classList.toggle("hidden", setupInputsAreLocked);
+      startingIndividualRetirementAccountBalanceSlider.classList.toggle("hidden", setupInputsAreLocked);
+      startingRothIndividualRetirementAccountBalanceSlider.classList.toggle("hidden", setupInputsAreLocked);
       capitalGainsToRealizeSlider.disabled = actionInputsAreLocked;
-      capitalGainsToRealizeInput.disabled = actionInputsAreLocked;
       individualRetirementAccountConversionSlider.disabled = actionInputsAreLocked;
-      individualRetirementAccountConversionInput.disabled = actionInputsAreLocked;
       startRoundButton.disabled = !loadedTaxBracketTables || currentGameState.phaseName !== "setup";
       closeYearButton.disabled = !loadedTaxBracketTables || currentGameState.phaseName !== "playing";
       closeYearButton.textContent = currentGameState.phaseName === "playing" && isFinalYear()
@@ -792,19 +864,19 @@
       readSetupFormIntoState();
       renderCurrentGame();
     });
-    startingRealizedGainsBasisInput.addEventListener("input", function () {
+    startingRealizedGainsBasisSlider.addEventListener("input", function () {
       readSetupFormIntoState();
       renderCurrentGame();
     });
-    startingUnrealizedGainsAmountInput.addEventListener("input", function () {
+    startingUnrealizedGainsAmountSlider.addEventListener("input", function () {
       readSetupFormIntoState();
       renderCurrentGame();
     });
-    startingIndividualRetirementAccountBalanceInput.addEventListener("input", function () {
+    startingIndividualRetirementAccountBalanceSlider.addEventListener("input", function () {
       readSetupFormIntoState();
       renderCurrentGame();
     });
-    startingRothIndividualRetirementAccountBalanceInput.addEventListener("input", function () {
+    startingRothIndividualRetirementAccountBalanceSlider.addEventListener("input", function () {
       readSetupFormIntoState();
       renderCurrentGame();
     });
@@ -815,14 +887,8 @@
     capitalGainsToRealizeSlider.addEventListener("input", function () {
       assignCapitalGainsToRealize(Number(capitalGainsToRealizeSlider.value));
     });
-    capitalGainsToRealizeInput.addEventListener("input", function () {
-      assignCapitalGainsToRealize(Number(capitalGainsToRealizeInput.value));
-    });
     individualRetirementAccountConversionSlider.addEventListener("input", function () {
       assignIndividualRetirementAccountConversion(Number(individualRetirementAccountConversionSlider.value));
-    });
-    individualRetirementAccountConversionInput.addEventListener("input", function () {
-      assignIndividualRetirementAccountConversion(Number(individualRetirementAccountConversionInput.value));
     });
     startRoundButton.addEventListener("click", startRound);
     newRoundButton.addEventListener("click", resetRoundToSetup);

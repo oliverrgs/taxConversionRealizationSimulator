@@ -5,6 +5,13 @@
     "name": "IRS Revenue Procedure 2025-32",
     "url": "https://www.irs.gov/pub/irs-drop/rp-25-32.pdf"
   },
+  "standardDeductionByFilingStatus": {
+    "marriedFilingJointly": 32200,
+    "headOfHousehold": 24150,
+    "singleFilers": 16100,
+    "marriedFilingSeparately": 16100,
+    "estatesAndTrusts": 0
+  },
   "ordinaryIncomeBracketsByFilingStatus": {
     "marriedFilingJointly": [
       { "marginalRate": 0.10, "minimumTaxableIncome": 0, "maximumTaxableIncome": 24800 },

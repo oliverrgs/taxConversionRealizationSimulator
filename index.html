@@ -407,7 +407,7 @@
       <label>
         Annual investment growth
         <div class="controlRow">
-          <input id="annualGrowthRateSlider" type="range" min="-10" max="20" step="0.1">
+          <input id="annualGrowthRateSlider" type="range" min="-10" max="20" step="0.5">
           <span id="annualGrowthRateLabel">0%</span>
         </div>
       </label>
@@ -1085,11 +1085,33 @@
       };
     }
 
+    function standardDeductionAmountForFilingStatus(selectedFilingStatus) {
+      if (!loadedTaxBracketTables || !loadedTaxBracketTables.standardDeductionByFilingStatus) {
+        return 0;
+      }
+      return loadedTaxBracketTables.standardDeductionByFilingStatus[selectedFilingStatus] || 0;
+    }
+
+    function taxableAmountsAfterStandardDeduction(ordinaryIncomeAmount, capitalGainsAmount, selectedFilingStatus) {
+      const standardDeductionAmount = standardDeductionAmountForFilingStatus(selectedFilingStatus);
+      const deductionAppliedToOrdinaryIncome = Math.min(ordinaryIncomeAmount, standardDeductionAmount);
+      const remainingStandardDeductionAmount = standardDeductionAmount - deductionAppliedToOrdinaryIncome;
+      return {
+        taxableOrdinaryIncomeAmount: ordinaryIncomeAmount - deductionAppliedToOrdinaryIncome,
+        taxableCapitalGainsAmount: capitalGainsAmount - Math.min(capitalGainsAmount, remainingStandardDeductionAmount)
+      };
+    }
+
     function calculateYearTaxes(ordinaryIncomeAmount, capitalGainsAmount, selectedFilingStatus) {
       const ordinaryIncomeBrackets = loadedTaxBracketTables.ordinaryIncomeBracketsByFilingStatus[selectedFilingStatus];
       const capitalGainsBrackets = loadedTaxBracketTables.longTermCapitalGainsBracketsByFilingStatus[selectedFilingStatus];
-      const ordinaryIncomeTaxResult = calculateTaxFromOrdinaryIncomeBrackets(ordinaryIncomeAmount, ordinaryIncomeBrackets);
-      const longTermCapitalGainsTaxResult = calculateLongTermCapitalGainsTax(ordinaryIncomeAmount, capitalGainsAmount, capitalGainsBrackets);
+      const taxableAmounts = taxableAmountsAfterStandardDeduction(ordinaryIncomeAmount, capitalGainsAmount, selectedFilingStatus);
+      const ordinaryIncomeTaxResult = calculateTaxFromOrdinaryIncomeBrackets(taxableAmounts.taxableOrdinaryIncomeAmount, ordinaryIncomeBrackets);
+      const longTermCapitalGainsTaxResult = calculateLongTermCapitalGainsTax(
+        taxableAmounts.taxableOrdinaryIncomeAmount,
+        taxableAmounts.taxableCapitalGainsAmount,
+        capitalGainsBrackets
+      );
       return {
         ordinaryIncomeTax: ordinaryIncomeTaxResult.totalTax,
         longTermCapitalGainsTax: longTermCapitalGainsTaxResult.totalTax,
@@ -1179,11 +1201,19 @@
       return selectorBubbles.concat(bracketCeilingBubbles);
     }
 
-    function selectorBubbleAmountForBar(selectorBubble, barMaximumAmount) {
+    function selectorBubbleAmountForBar(selectorBubble, barMaximumAmount, selectorKindName) {
       if (selectorBubble.bubbleKey === remainingYearsEvenSplitBubbleKey) {
         return clampInteger(Math.round(barMaximumAmount / remainingYearCountIncludingCurrentYear()), 0, barMaximumAmount);
       }
-      return clampInteger(selectorBubble.bracketCeiling, 0, barMaximumAmount);
+      const standardDeductionAmount = standardDeductionAmountForFilingStatus(currentGameState.selectedFilingStatus);
+      if (selectorKindName === "capitalGains") {
+        return clampInteger(
+          selectorBubble.bracketCeiling + standardDeductionAmount - currentGameState.individualRetirementAccountConversionThisYear,
+          0,
+          barMaximumAmount
+        );
+      }
+      return clampInteger(selectorBubble.bracketCeiling + standardDeductionAmount, 0, barMaximumAmount);
     }
 
     function findSelectorBubbleByKey(bubbleKey) {
@@ -1200,21 +1230,23 @@
       if (currentGameState.phaseName !== "playing" || isFinalYear()) {
         return;
       }
-      if (currentGameState.selectedCapitalGainsSelectorBubbleKey) {
-        const selectedCapitalGainsSelectorBubble = findSelectorBubbleByKey(currentGameState.selectedCapitalGainsSelectorBubbleKey);
-        if (selectedCapitalGainsSelectorBubble) {
-          currentGameState.capitalGainsToRealizeThisYear = selectorBubbleAmountForBar(
-            selectedCapitalGainsSelectorBubble,
-            currentGameState.unrealizedGainsAmount
-          );
-        }
-      }
       if (currentGameState.selectedConversionSelectorBubbleKey) {
         const selectedConversionSelectorBubble = findSelectorBubbleByKey(currentGameState.selectedConversionSelectorBubbleKey);
         if (selectedConversionSelectorBubble) {
           currentGameState.individualRetirementAccountConversionThisYear = selectorBubbleAmountForBar(
             selectedConversionSelectorBubble,
-            currentGameState.individualRetirementAccountBalance
+            currentGameState.individualRetirementAccountBalance,
+            "conversion"
+          );
+        }
+      }
+      if (currentGameState.selectedCapitalGainsSelectorBubbleKey) {
+        const selectedCapitalGainsSelectorBubble = findSelectorBubbleByKey(currentGameState.selectedCapitalGainsSelectorBubbleKey);
+        if (selectedCapitalGainsSelectorBubble) {
+          currentGameState.capitalGainsToRealizeThisYear = selectorBubbleAmountForBar(
+            selectedCapitalGainsSelectorBubble,
+            currentGameState.unrealizedGainsAmount,
+            "capitalGains"
           );
         }
       }
@@ -1224,8 +1256,14 @@
       selectorBubbleRow.replaceChildren();
       const selectorBubblesAreLocked = currentGameState.phaseName !== "playing" || isFinalYear();
       for (const selectorBubble of collectSelectorBubbles()) {
-        if (selectorBubble.bracketCeiling !== null && selectorBubble.bracketCeiling > barMaximumAmount) {
-          continue;
+        if (selectorBubble.bracketCeiling !== null) {
+          const standardDeductionAmount = standardDeductionAmountForFilingStatus(currentGameState.selectedFilingStatus);
+          const unclampedSelectorBubbleTargetAmount = selectorKindName === "capitalGains"
+            ? selectorBubble.bracketCeiling + standardDeductionAmount - currentGameState.individualRetirementAccountConversionThisYear
+            : selectorBubble.bracketCeiling + standardDeductionAmount;
+          if (unclampedSelectorBubbleTargetAmount <= 0 || unclampedSelectorBubbleTargetAmount > barMaximumAmount) {
+            continue;
+          }
         }
         const selectorBubbleButton = document.createElement("button");
         selectorBubbleButton.type = "button";
@@ -1407,10 +1445,15 @@
       }
       const ordinaryIncomeBrackets = loadedTaxBracketTables.ordinaryIncomeBracketsByFilingStatus[currentGameState.selectedFilingStatus];
       const capitalGainsBrackets = loadedTaxBracketTables.longTermCapitalGainsBracketsByFilingStatus[currentGameState.selectedFilingStatus];
-      const stackedTaxableIncomeForGains = yearActions.individualRetirementAccountConversion + yearActions.capitalGainsToRealize;
-      const conversionIsAtExactBracketCeiling = isExactBracketCeiling(yearActions.individualRetirementAccountConversion, ordinaryIncomeBrackets);
-      const capitalGainsAreAtExactBracketCeiling = isExactBracketCeiling(stackedTaxableIncomeForGains, capitalGainsBrackets) && yearActions.capitalGainsToRealize > 0;
-      ordinaryIncomeBracketLabel.textContent = describeIncomeBracket(yearActions.individualRetirementAccountConversion, ordinaryIncomeBrackets);
+      const taxableAmounts = taxableAmountsAfterStandardDeduction(
+        yearActions.individualRetirementAccountConversion,
+        yearActions.capitalGainsToRealize,
+        currentGameState.selectedFilingStatus
+      );
+      const stackedTaxableIncomeForGains = taxableAmounts.taxableOrdinaryIncomeAmount + taxableAmounts.taxableCapitalGainsAmount;
+      const conversionIsAtExactBracketCeiling = isExactBracketCeiling(taxableAmounts.taxableOrdinaryIncomeAmount, ordinaryIncomeBrackets);
+      const capitalGainsAreAtExactBracketCeiling = isExactBracketCeiling(stackedTaxableIncomeForGains, capitalGainsBrackets) && taxableAmounts.taxableCapitalGainsAmount > 0;
+      ordinaryIncomeBracketLabel.textContent = describeIncomeBracket(taxableAmounts.taxableOrdinaryIncomeAmount, ordinaryIncomeBrackets);
       capitalGainsBracketLabel.textContent = describeIncomeBracket(stackedTaxableIncomeForGains, capitalGainsBrackets);
       individualRetirementAccountConversionSlider.classList.toggle("atExactBracketCeiling", conversionIsAtExactBracketCeiling);
       capitalGainsToRealizeSlider.classList.toggle("atExactBracketCeiling", capitalGainsAreAtExactBracketCeiling);
@@ -1536,7 +1579,7 @@
       currentGameState.capitalGainsToRealizeThisYear = clampInteger(requestedAmount, 0, currentGameState.unrealizedGainsAmount);
       const selectedCapitalGainsSelectorBubble = findSelectorBubbleByKey(currentGameState.selectedCapitalGainsSelectorBubbleKey);
       if (selectedCapitalGainsSelectorBubble) {
-        const selectedBubbleAmount = selectorBubbleAmountForBar(selectedCapitalGainsSelectorBubble, currentGameState.unrealizedGainsAmount);
+        const selectedBubbleAmount = selectorBubbleAmountForBar(selectedCapitalGainsSelectorBubble, currentGameState.unrealizedGainsAmount, "capitalGains");
         if (currentGameState.capitalGainsToRealizeThisYear !== selectedBubbleAmount) {
           currentGameState.selectedCapitalGainsSelectorBubbleKey = null;
         }
@@ -1548,7 +1591,7 @@
       currentGameState.individualRetirementAccountConversionThisYear = clampInteger(requestedAmount, 0, currentGameState.individualRetirementAccountBalance);
       const selectedConversionSelectorBubble = findSelectorBubbleByKey(currentGameState.selectedConversionSelectorBubbleKey);
       if (selectedConversionSelectorBubble) {
-        const selectedBubbleAmount = selectorBubbleAmountForBar(selectedConversionSelectorBubble, currentGameState.individualRetirementAccountBalance);
+        const selectedBubbleAmount = selectorBubbleAmountForBar(selectedConversionSelectorBubble, currentGameState.individualRetirementAccountBalance, "conversion");
         if (currentGameState.individualRetirementAccountConversionThisYear !== selectedBubbleAmount) {
           currentGameState.selectedConversionSelectorBubbleKey = null;
         }

@@ -907,12 +907,57 @@
     }
 
     function endingWealthAmountFromBalancesAndTax(accountBalances, taxesCharged) {
-      return bucketTotalFromBalances(accountBalances) - taxesCharged;
+      return bucketTotalFromBalances(accountBalances);
+    }
+
+    function applyChosenYearActionsToAccountBalances(accountBalances, capitalGainsToRealize, individualRetirementAccountConversion) {
+      return {
+        realizedGainsBasis: accountBalances.realizedGainsBasis + capitalGainsToRealize,
+        unrealizedGainsAmount: accountBalances.unrealizedGainsAmount - capitalGainsToRealize,
+        individualRetirementAccountBalance: accountBalances.individualRetirementAccountBalance - individualRetirementAccountConversion,
+        rothIndividualRetirementAccountBalance: accountBalances.rothIndividualRetirementAccountBalance + individualRetirementAccountConversion
+      };
+    }
+
+    function payYearTaxesFromAccountBalances(accountBalances, taxAmountToPay) {
+      let remainingTaxAmountToPay = Math.max(0, Math.round(taxAmountToPay));
+      let realizedGainsBasis = accountBalances.realizedGainsBasis;
+      let unrealizedGainsAmount = accountBalances.unrealizedGainsAmount;
+      let rothIndividualRetirementAccountBalance = accountBalances.rothIndividualRetirementAccountBalance;
+      const taxPaidFromUnrealizedGainsAmount = Math.min(unrealizedGainsAmount, remainingTaxAmountToPay);
+      unrealizedGainsAmount -= taxPaidFromUnrealizedGainsAmount;
+      remainingTaxAmountToPay -= taxPaidFromUnrealizedGainsAmount;
+      const taxPaidFromRealizedGainsBasis = Math.min(realizedGainsBasis, remainingTaxAmountToPay);
+      realizedGainsBasis -= taxPaidFromRealizedGainsBasis;
+      remainingTaxAmountToPay -= taxPaidFromRealizedGainsBasis;
+      const taxPaidFromRothIndividualRetirementAccountBalance = Math.min(rothIndividualRetirementAccountBalance, remainingTaxAmountToPay);
+      rothIndividualRetirementAccountBalance -= taxPaidFromRothIndividualRetirementAccountBalance;
+      return {
+        realizedGainsBasis: realizedGainsBasis,
+        unrealizedGainsAmount: unrealizedGainsAmount,
+        individualRetirementAccountBalance: accountBalances.individualRetirementAccountBalance,
+        rothIndividualRetirementAccountBalance: rothIndividualRetirementAccountBalance
+      };
     }
 
     function currentPlayerWealthAmount() {
-      const playerTotals = playerTaxAndActionTotals();
-      return endingWealthAmountFromBalancesAndTax(currentGameState, playerTotals.totalTaxAmount);
+      if (!loadedTaxBracketTables || currentGameState.phaseName !== "playing") {
+        return bucketTotalFromBalances(currentGameState);
+      }
+      const yearActions = chosenYearActions();
+      const accountBalancesAfterYearActions = applyChosenYearActionsToAccountBalances(
+        currentGameState,
+        yearActions.capitalGainsToRealize,
+        yearActions.individualRetirementAccountConversion
+      );
+      const yearTaxes = calculateYearTaxes(
+        yearActions.individualRetirementAccountConversion,
+        yearActions.capitalGainsToRealize,
+        currentGameState.selectedFilingStatus
+      );
+      return bucketTotalFromBalances(
+        payYearTaxesFromAccountBalances(accountBalancesAfterYearActions, yearTaxes.totalTax)
+      );
     }
 
     function strategyWealthThroughYearNumber(strategyRecord, yearNumber) {
@@ -923,14 +968,21 @@
         individualRetirementAccountBalance: startingAccountScenario.individualRetirementAccountBalance,
         rothIndividualRetirementAccountBalance: startingAccountScenario.rothIndividualRetirementAccountBalance
       };
-      let replayedTaxesCharged = 0;
-      let wealthThroughRequestedYear = endingWealthAmountFromBalancesAndTax(replayedBalances, 0);
+      let wealthThroughRequestedYear = bucketTotalFromBalances(replayedBalances);
       for (const yearHistoryRecord of strategyRecord.yearHistoryRecords) {
-        replayedBalances.realizedGainsBasis += yearHistoryRecord.capitalGainsRealized;
-        replayedBalances.unrealizedGainsAmount -= yearHistoryRecord.capitalGainsRealized;
-        replayedBalances.individualRetirementAccountBalance -= yearHistoryRecord.individualRetirementAccountConverted;
-        replayedBalances.rothIndividualRetirementAccountBalance += yearHistoryRecord.individualRetirementAccountConverted;
-        replayedTaxesCharged += yearHistoryRecord.totalTax;
+        const replayedBalancesAfterYearActions = applyChosenYearActionsToAccountBalances(
+          replayedBalances,
+          yearHistoryRecord.capitalGainsRealized,
+          yearHistoryRecord.individualRetirementAccountConverted
+        );
+        const replayedBalancesAfterTaxPayment = payYearTaxesFromAccountBalances(
+          replayedBalancesAfterYearActions,
+          yearHistoryRecord.totalTax
+        );
+        replayedBalances.realizedGainsBasis = replayedBalancesAfterTaxPayment.realizedGainsBasis;
+        replayedBalances.unrealizedGainsAmount = replayedBalancesAfterTaxPayment.unrealizedGainsAmount;
+        replayedBalances.individualRetirementAccountBalance = replayedBalancesAfterTaxPayment.individualRetirementAccountBalance;
+        replayedBalances.rothIndividualRetirementAccountBalance = replayedBalancesAfterTaxPayment.rothIndividualRetirementAccountBalance;
         if (yearHistoryRecord.growthRateApplied !== null) {
           const balancesAfterGrowth = applyAnnualGrowthToBalances(replayedBalances, yearHistoryRecord.growthRateApplied);
           replayedBalances.realizedGainsBasis = balancesAfterGrowth.realizedGainsBasis;
@@ -939,16 +991,13 @@
           replayedBalances.rothIndividualRetirementAccountBalance = balancesAfterGrowth.rothIndividualRetirementAccountBalance;
         }
         if (yearHistoryRecord.yearNumber <= yearNumber) {
-          wealthThroughRequestedYear = endingWealthAmountFromBalancesAndTax(replayedBalances, replayedTaxesCharged);
+          wealthThroughRequestedYear = bucketTotalFromBalances(replayedBalances);
         }
       }
       return wealthThroughRequestedYear;
     }
 
     function strategyEndingWealthAmount(strategyRecord) {
-      if (Number.isFinite(strategyRecord.endingWealthAmount)) {
-        return strategyRecord.endingWealthAmount;
-      }
       return strategyWealthThroughYearNumber(strategyRecord, strategyRecord.totalYearCount);
     }
 
@@ -1584,12 +1633,14 @@
         clampedCapitalGainsToRealize,
         selectedFilingStatus
       );
-      let accountBalancesAfterYearActions = {
-        realizedGainsBasis: artificialIntelligenceSearchState.realizedGainsBasis + clampedCapitalGainsToRealize,
-        unrealizedGainsAmount: artificialIntelligenceSearchState.unrealizedGainsAmount - clampedCapitalGainsToRealize,
-        individualRetirementAccountBalance: artificialIntelligenceSearchState.individualRetirementAccountBalance - clampedIndividualRetirementAccountConversion,
-        rothIndividualRetirementAccountBalance: artificialIntelligenceSearchState.rothIndividualRetirementAccountBalance + clampedIndividualRetirementAccountConversion
-      };
+      let accountBalancesAfterYearActions = payYearTaxesFromAccountBalances(
+        applyChosenYearActionsToAccountBalances(
+          artificialIntelligenceSearchState,
+          clampedCapitalGainsToRealize,
+          clampedIndividualRetirementAccountConversion
+        ),
+        yearTaxes.totalTax
+      );
       if (!isFinalYearOfRound) {
         accountBalancesAfterYearActions = applyAnnualGrowthToBalances(accountBalancesAfterYearActions, annualGrowthRate);
       }
@@ -1606,17 +1657,26 @@
       };
     }
 
-    function leftoverDumpTaxAmountForSearchState(artificialIntelligenceSearchState, selectedFilingStatus) {
-      return calculateYearTaxes(
+    function leftoverDumpWealthAmountForSearchState(artificialIntelligenceSearchState, selectedFilingStatus) {
+      const leftoverDumpYearTaxes = calculateYearTaxes(
         artificialIntelligenceSearchState.individualRetirementAccountBalance,
         artificialIntelligenceSearchState.unrealizedGainsAmount,
         selectedFilingStatus
-      ).totalTax;
+      );
+      return bucketTotalFromBalances(
+        payYearTaxesFromAccountBalances(
+          applyChosenYearActionsToAccountBalances(
+            artificialIntelligenceSearchState,
+            artificialIntelligenceSearchState.unrealizedGainsAmount,
+            artificialIntelligenceSearchState.individualRetirementAccountBalance
+          ),
+          leftoverDumpYearTaxes.totalTax
+        )
+      );
     }
 
     function artificialIntelligenceSearchStateRankCost(artificialIntelligenceSearchState, selectedFilingStatus) {
-      return artificialIntelligenceSearchState.cumulativeTaxesCharged
-        + leftoverDumpTaxAmountForSearchState(artificialIntelligenceSearchState, selectedFilingStatus);
+      return -leftoverDumpWealthAmountForSearchState(artificialIntelligenceSearchState, selectedFilingStatus);
     }
 
     function shrinkArtificialIntelligenceSearchBeam(artificialIntelligenceSearchStates, selectedFilingStatus) {
@@ -1817,10 +1877,17 @@
         yearActions.capitalGainsToRealize,
         currentGameState.selectedFilingStatus
       );
-      currentGameState.realizedGainsBasis += yearActions.capitalGainsToRealize;
-      currentGameState.unrealizedGainsAmount -= yearActions.capitalGainsToRealize;
-      currentGameState.individualRetirementAccountBalance -= yearActions.individualRetirementAccountConversion;
-      currentGameState.rothIndividualRetirementAccountBalance += yearActions.individualRetirementAccountConversion;
+      applyAccountBalancesToGameState(
+        currentGameState,
+        payYearTaxesFromAccountBalances(
+          applyChosenYearActionsToAccountBalances(
+            currentGameState,
+            yearActions.capitalGainsToRealize,
+            yearActions.individualRetirementAccountConversion
+          ),
+          yearTaxes.totalTax
+        )
+      );
       currentGameState.cumulativeTaxesCharged += yearTaxes.totalTax;
       const completedFinalYear = isFinalYear();
       let growthRateAppliedThisYear = null;
